@@ -1,0 +1,48 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Local agent metadata
+.claude/
+CLAUDE.md
+
+# Node / package tools
+node_modules/
+npm-debug.log*
+
+# Java / Gradle
+.gradle/
+build/
+out/
+*.class
+*.jar
+*.war
+*.ear
+.gradle-cache/
+gradle-app.setting
+.gradletasknamecache
+
+# IntelliJ Platform sandbox / plugin outputs
+sandbox/
+**/build/idea-sandbox/
+**/build/plugin/
+
+# Test outputs
+test-output/
+test-results/
+coverage/
+
+# Logs / temp
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+
+# Env
+.env
+.env.local
