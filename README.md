@@ -2,9 +2,31 @@
 
 A standalone skills repository for IntelliJ Platform plugin development.
 
-This repository currently provides one production-ready skill:
+This repository currently contains one focused skill:
 
-- `skills/intellij-platform-sdk` — a structured skill for developing plugins with the modern IntelliJ Platform v2 SDK / IntelliJ Platform Gradle Plugin 2.x.
+- `skills/intellij-platform-sdk` — a structured skill for working with the modern IntelliJ Platform v2 SDK / IntelliJ Platform Gradle Plugin 2.x.
+
+The skill is designed to help with:
+
+- creating IntelliJ Platform plugins
+- configuring `build.gradle.kts`, `settings.gradle.kts`, and `plugin.xml`
+- implementing actions, services, tool windows, settings, and notifications
+- working with PSI, references, indexing, VFS, and dumb mode
+- building custom language support
+- implementing completion, inspections, intentions, and quick fixes
+- testing plugins and preparing Marketplace publication
+- handling platform compatibility and migration to Gradle Plugin 2.x
+
+## Why this repository exists
+
+This repository is organized as a skills-first repository rather than a traditional application codebase.
+
+The included skill is intentionally split into:
+
+- a lightweight `SKILL.md` entrypoint for triggering and routing
+- topic-focused `references/` files for detailed guidance
+
+This keeps the main skill file small, improves maintainability, and makes it easier to load only the material that is relevant to the current task.
 
 ## Repository layout
 
@@ -31,28 +53,6 @@ intellij-platform-sdk-skills/
             ├── troubleshooting-build-runtime.md
             └── troubleshooting-psi-ui-testing.md
 ```
-
-## Included skill
-
-### `intellij-platform-sdk`
-
-This skill is designed for tasks such as:
-
-- creating IntelliJ Platform plugins
-- configuring `build.gradle.kts`, `settings.gradle.kts`, and `plugin.xml`
-- implementing actions, services, tool windows, settings, and notifications
-- working with PSI, references, indexing, VFS, and dumb mode
-- building custom language support
-- implementing completion, inspections, intentions, and quick fixes
-- testing plugins and preparing Marketplace publication
-- handling platform compatibility and migration to Gradle Plugin 2.x
-
-The skill is intentionally organized as:
-
-- a lightweight `SKILL.md` entrypoint for triggering and routing
-- topic-focused `references/` files for detailed guidance
-
-This keeps the main skill file small and makes the repository easier to maintain.
 
 ## Installation
 
@@ -110,9 +110,16 @@ Typical destinations include:
 - `~/.claude/skills/`
 - any compatible skills directory that supports `SKILL.md`
 
-## Source material
+## Sources
 
-This repository is based on the official IntelliJ Platform SDK documentation and related JetBrains samples.
+This repository is based on the official JetBrains IntelliJ Platform documentation and related sample material.
+
+- Official documentation: https://plugins.jetbrains.com/docs/intellij/
+- Official documentation repository: https://github.com/JetBrains/intellij-sdk-docs
+
+## Notes
+
+This repository was written based on JetBrains documentation, with Kimi K2.5 and GPT-5.4 included in the writing workflow.
 
 ## License
 
