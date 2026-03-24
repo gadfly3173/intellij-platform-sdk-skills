@@ -174,3 +174,5 @@ When a user asks for implementation help:
 - `references/code_samples.md`
 - `references/patterns.md`
 - `references/troubleshooting.md`
+- `references/troubleshooting-build-runtime.md`
+- `references/troubleshooting-psi-ui-testing.md`
