@@ -26,7 +26,7 @@ public static <T extends PsiElement> T getParentOfType(
 
 ```java
 // Find all methods in a class
-List<PsiMethod> methods = PsiTreeUtil.findChildrenOfType(
+Collection<PsiMethod> methods = PsiTreeUtil.findChildrenOfType(
     psiClass, PsiMethod.class);
 
 // Find children of type with filtering
@@ -86,7 +86,7 @@ public static void addMethodToClass(
 
     WriteCommandAction.runWriteCommandAction(project, () -> {
         PsiElementFactory factory =
-            JavaPsiFacade.getElementFactory(project);
+            PsiElementFactory.getInstance(project);
         PsiMethod method = factory.createMethodFromText(
             methodText, psiClass);
         psiClass.add(method);
@@ -104,13 +104,15 @@ public static void replaceElement(
 
     WriteCommandAction.runWriteCommandAction(project, () -> {
         PsiElementFactory factory =
-            JavaPsiFacade.getElementFactory(project);
+            PsiElementFactory.getInstance(project);
         PsiElement newElement = factory.createExpressionFromText(
             newText, oldElement.getParent());
         oldElement.replace(newElement);
     });
 }
 ```
+
+Note: `PsiElementFactory` is Java PSI specific — requires a dependency on the Java plugin (`com.intellij.modules.java`).
 
 ## Caching Patterns
 
@@ -132,7 +134,7 @@ public class MyService {
                 List<String> result = computeData(file);
                 return CachedValueProvider.Result.create(
                     result,
-                    PsiModificationTracker.MODIFICATION_COUNT
+                    PsiModificationTracker.getInstance(file.getProject())
                 );
             }
         );
@@ -210,49 +212,61 @@ public static void replaceRange(@NotNull Editor editor,
 VirtualFile file = LocalFileSystem.getInstance()
     .findFileByPath("/path/to/file.java");
 
-// In project
-VirtualFile file = ProjectRootManager.getInstance(project)
-    .getFileIndex()
+// By URL
+VirtualFile file = VirtualFileManager.getInstance()
     .findFileByUrl("file:///path/to/file.java");
 
-// By relative path
-VirtualFile baseDir = project.getBaseDir();
-VirtualFile file = baseDir.findFileByRelativePath("src/main/java");
+// By relative path from project root (getBaseDir() is deprecated)
+VirtualFile baseDir = ProjectUtil.guessProjectDir(project);
+VirtualFile file = baseDir != null
+    ? baseDir.findFileByRelativePath("src/main/java") : null;
 ```
 
 ### Listen for Changes
 
+Use message-bus-based `BulkFileListener` (preferred) or add a disposable-aware VFS listener.
+
+**Important:** VFS listeners are application-level — they receive events for all open projects. Filter events by project when needed.
+
 ```java
+// Preferred: BulkFileListener via message bus
+project.getMessageBus().connect(disposable).subscribe(
+    VirtualFileManager.VFS_CHANGES,
+    new BulkFileListener() {
+        @Override
+        public void after(@NotNull List<? extends VFileEvent> events) {
+            for (VFileEvent event : events) {
+                if (event instanceof VFileContentChangeEvent) {
+                    // handle content change
+                }
+            }
+        }
+    }
+);
+
+// Alternative: direct listener with disposable for cleanup
 VirtualFileManager.getInstance().addVirtualFileListener(
     new VirtualFileListener() {
         @Override
         public void contentsChanged(@NotNull VirtualFileEvent event) {
             // Handle file change
         }
-
-        @Override
-        public void fileCreated(@NotNull VirtualFileEvent event) {
-            // Handle file creation
-        }
-
-        @Override
-        public void fileDeleted(@NotNull VirtualFileEvent event) {
-            // Handle file deletion
-        }
-    }
+    },
+    disposable // ensures cleanup on plugin unload
 );
 ```
 
 ## Progress Patterns
 
+Note: The `Task`/`ProgressManager.run()` pattern below is marked `@Obsolete` since 2024.1. For plugins targeting 2024.1+, prefer Kotlin coroutines with `withBackgroundProgress`. The pattern below remains valid for older platform targets.
+
 ### Background Task
 
 ```java
-ProgressManager.getInstance().run(new Task.Backgroundable(
+new Task.Backgroundable(
     project,
     "Processing...",
-    true, // canBeCancelled
-    PerformInBackgroundOption.DEAF
+    true // canBeCancelled
 ) {
     @Override
     public void run(@NotNull ProgressIndicator indicator) {
@@ -273,11 +287,11 @@ ProgressManager.getInstance().run(new Task.Backgroundable(
     @Override
     public void onSuccess() {
         // Called on EDT
-        Notifications.Bus.notify(
-            new Notification("group", "Success", "Done!", NotificationType.INFORMATION)
-        );
+        new Notification(
+            "MyPlugin.Notifications", "Success", "Done!", NotificationType.INFORMATION
+        ).notify(project);
     }
-});
+}.queue();  // preferred over ProgressManager.getInstance().run(task)
 ```
 
 ### Modal Task
@@ -412,12 +426,15 @@ ReadAction.nonBlocking(() -> {
     // Read action
     return computeExpensiveResult();
 })
+.inSmartMode(project) // add this if the read accesses file-based indexes
 .finishOnUiThread(ModalityState.defaultModalityState(), result -> {
     // Handle result on EDT
     updateUI(result);
 })
 .submit(AppExecutorUtil.getAppExecutorService());
 ```
+
+Use `.inSmartMode(project)` when the read performs PSI analysis, resolves references, or depends on indexes. This ensures the action waits for indexing to finish before executing.
 
 ### Invoke Later
 
@@ -491,10 +508,8 @@ toolWindow.getContentManager().addContent(tab2);
 ### Show Notification
 
 ```java
-NotificationGroup group = NotificationGroupManager.getInstance()
-    .getNotificationGroup("MyPlugin.Notifications");
-
-Notification notification = group.createNotification(
+Notification notification = new Notification(
+    "MyPlugin.Notifications",    // notification group ID (registered in plugin.xml)
     "Title",
     "Message content",
     NotificationType.INFORMATION
@@ -506,22 +521,18 @@ notification.addAction(NotificationAction.createSimple(
         .showSettingsDialog(project, "MyPlugin.Settings")
 ));
 
-Notifications.Bus.notify(notification, project);
+notification.notify(project);
 ```
 
 ### Balloon Notification
 
 ```java
-NotificationGroup group = NotificationGroupManager.getInstance()
-    .getNotificationGroup("MyPlugin.Notifications");
-
-Notification notification = group.createNotification(
+new Notification(
+    "MyPlugin.Notifications",
     "Title",
     "Message",
     NotificationType.INFORMATION
-);
-
-notification.notify(project);
+).notify(project);
 ```
 
 ## Completion Patterns
@@ -546,14 +557,14 @@ public class MyCompletionContributor extends CompletionContributor {
                         .create("myMethod")
                         .withTypeText("void")
                         .withIcon(AllIcons.Nodes.Method)
-                        .withInsertHandler((context, item) -> {
-                            // Custom insert handler
-                            Editor editor = context.getEditor();
+                        .withInsertHandler((insertCtx, item) -> {
+                            // Position caret between parentheses
+                            Editor editor = insertCtx.getEditor();
                             editor.getDocument().insertString(
-                                context.getTailOffset(), "()"
+                                insertCtx.getTailOffset(), "()"
                             );
                             editor.getCaretModel().moveToOffset(
-                                context.getTailOffset() + 1
+                                insertCtx.getTailOffset() - 1
                             );
                         })
                     );

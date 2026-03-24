@@ -30,9 +30,9 @@ my-plugin/
 
 ## Recommended baseline
 
-- JDK 21 for current platform targets
-- Gradle 8.5+
-- IntelliJ Platform Gradle Plugin `2.2.x`
+- JDK 17+ (minimum required by the IntelliJ Platform Gradle Plugin 2.x; JDK 21 recommended for 2025.1+ targets)
+- Gradle 8.13+
+- IntelliJ Platform Gradle Plugin `2.13.1`
 - Prefer Kotlin DSL in Gradle files
 
 ## `build.gradle.kts` template
@@ -40,7 +40,7 @@ my-plugin/
 ```kotlin
 plugins {
     id("java")
-    id("org.jetbrains.intellij.platform") version "2.2.0"
+    id("org.jetbrains.intellij.platform") version "2.13.1"
 }
 
 group = "com.example"
@@ -55,15 +55,22 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        intellijIdeaCommunity("2024.3")
+        intellijIdea("2024.3")
         bundledPlugin("com.intellij.java")
+
+        testFramework(TestFrameworkType.Platform)
     }
 }
 
 intellijPlatform {
     pluginConfiguration {
+        id = "com.example.myplugin"
         name = "My Plugin"
+        version = project.version.toString()
         description = "Plugin description"
+        vendor {
+            name = "Gadfly"
+        }
         ideaVersion {
             sinceBuild = "243"
             untilBuild = "243.*"
@@ -72,17 +79,69 @@ intellijPlatform {
 }
 ```
 
+## `settings.gradle.kts` template
+
+Minimal:
+
+```kotlin
+rootProject.name = "my-plugin"
+```
+
+With centralized dependency resolution (recommended for multi-module or strict builds):
+
+```kotlin
+import org.jetbrains.intellij.platform.gradle.extensions.intellijPlatform
+
+plugins {
+    id("org.jetbrains.intellij.platform.settings") version "2.13.1"
+}
+
+dependencyResolutionManagement {
+    repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
+
+    repositories {
+        mavenCentral()
+
+        intellijPlatform {
+            defaultRepositories()
+        }
+    }
+}
+
+rootProject.name = "my-plugin"
+```
+
+## `gradle.properties` template
+
+```properties
+# IntelliJ Platform Gradle Plugin settings
+org.jetbrains.intellij.platform.downloadSources=true
+org.jetbrains.intellij.platform.selfUpdateCheck=false
+
+# Gradle performance
+org.gradle.configuration-cache=true
+org.gradle.caching=true
+```
+
 ## Target IDE selection
 
-Choose the IDE artifact based on the real target:
+Choose the IDE dependency based on the real target. The function name determines which IDE is used for development and testing:
 
-- `intellijIdeaCommunity("2024.3")`
-- `intellijIdeaUltimate("2024.3")`
-- `pycharmCommunity("2024.3")`
-- `webstorm("2024.3")`
-- `goland("2024.3")`
-- `rider("2024.3")`
-- `androidStudio("2024.3")`
+- `intellijIdea("2024.3")` -- IntelliJ IDEA (Community + Ultimate)
+- `pycharm("2024.3")` -- PyCharm
+- `webstorm("2024.3")` -- WebStorm
+- `goland("2024.3")` -- GoLand
+- `rider("2024.3")` -- Rider
+- `clion("2024.3")` -- CLion
+- `phpstorm("2024.3")` -- PhpStorm
+- `rubymine("2024.3")` -- RubyMine
+- `rustRover("2024.3")` -- RustRover
+- `androidStudio("2024.3")` -- Android Studio
+- `datagrip("2024.3")` -- DataGrip
+- `dataspell("2024.3")` -- DataSpell
+- `gateway("2024.3")` -- Gateway
+- `fleetBackend("2024.3")` -- Fleet Backend
+- `mps("2024.3")` -- MPS
 
 Only add bundled plugins you truly need.
 
@@ -95,8 +154,6 @@ Only add bundled plugins you truly need.
     <vendor>Gadfly</vendor>
 
     <depends>com.intellij.modules.platform</depends>
-    <!-- Add product/language specific modules only when needed -->
-    <depends>com.intellij.modules.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- extension points go here -->
@@ -108,6 +165,8 @@ Only add bundled plugins you truly need.
 </idea-plugin>
 ```
 
+Add product/language-specific modules only when needed (e.g. `<depends>com.intellij.modules.java</depends>` for Java-specific PSI).
+
 ## Dependency strategy
 
 Prefer the smallest viable dependency set:
@@ -117,13 +176,18 @@ Prefer the smallest viable dependency set:
 - Add `com.intellij.modules.java` only for Java-specific PSI or UI integration
 - Use optional dependencies for integrations that may not exist in every IDE
 
+In Gradle, use `bundledPlugin("pluginId")` for bundled plugin dependencies and `bundledModule("moduleId")` for platform module dependencies. These are distinct helpers -- modules represent platform capabilities while plugins are optional feature bundles.
+
 ## Optional dependency pattern
 
+When your plugin has extensions that depend on an optional plugin, use both `optional` and `config-file` attributes. The `config-file` is **required** when `optional` is `true`:
+
 ```xml
-<depends optional="true">org.jetbrains.plugins.yaml</depends>
+<depends optional="true"
+         config-file="myPluginId-optionalPluginName.xml">org.jetbrains.plugins.yaml</depends>
 ```
 
-Use this when your plugin can still function without the dependency.
+The `config-file` points to a separate XML file (in the same directory as `plugin.xml`) that contains only the extensions for the optional integration. This file must have a unique name to avoid classloader conflicts in tests.
 
 ## Project setup advice
 
@@ -135,6 +199,24 @@ When implementing for a user:
 4. Put implementation classes in `src/main/java` or `src/main/kotlin`
 5. Put icons, templates, and `plugin.xml` resources under `src/main/resources`
 
+## Multi-module projects
+
+For larger plugins, split into multiple Gradle modules. Use `org.jetbrains.intellij.platform.module` plugin in submodules and `pluginModule()` in the main module's dependencies to wire them together:
+
+```kotlin
+// In submodule build.gradle.kts
+plugins {
+    id("org.jetbrains.intellij.platform.module")
+}
+
+// In main module build.gradle.kts dependencies
+dependencies {
+    intellijPlatform {
+        pluginModule(implementation(project(":submodule")))
+    }
+}
+```
+
 ## Common setup mistakes
 
 - Using the legacy `org.jetbrains.intellij` plugin instead of `org.jetbrains.intellij.platform`
@@ -142,6 +224,8 @@ When implementing for a user:
 - Declaring too many bundled plugins
 - Setting an overly broad `untilBuild`
 - Targeting Java APIs without `com.intellij.modules.java`
+- Missing `config-file` in optional `<depends>` when separate extensions are needed
+- Using Gradle version below the minimum required by the chosen plugin version
 
 ## When to also read other references
 

@@ -6,6 +6,12 @@ description: >
   inspections, intentions, code completion, custom language support, tool windows, settings,
   notifications, indexing, VFS, dumb mode, plugin verifier, Marketplace publishing, or target IDEs
   like IntelliJ IDEA, WebStorm, PyCharm, GoLand, Android Studio, Rider, or CLion.
+  Also trigger for: Gradle IntelliJ Plugin, runIde, buildPlugin, extension point, EP registration,
+  light service, @Service, persistent state, PersistentStateComponent, plugin descriptor,
+  WriteCommandAction, run configuration, file type, syntax highlighter, ParserDefinition,
+  CompletionContributor, LocalInspectionTool, ToolWindowFactory, DialogWrapper, Kotlin UI DSL,
+  dynamic plugins, coroutine scope in plugins, ActionUpdateThread, or any build.gradle.kts
+  referencing org.jetbrains.intellij.platform.
 ---
 
 # IntelliJ Platform SDK Skill
@@ -43,6 +49,8 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - services (`@Service`, project/application/module services)
 - Virtual File System (`VirtualFile`, VFS listeners)
 - threading, read/write actions, dumb mode
+- Kotlin coroutine patterns in plugins (`readAction`, `writeAction`, `CoroutineScope`)
+- dynamic plugin loading/unloading
 - general plugin architecture decisions
 
 ### Read `references/psi-and-indexing.md` when the task is about
@@ -63,11 +71,13 @@ First, identify the user’s real task. Then read only the relevant reference fi
 
 ### Read `references/ui-settings-and-toolwindows.md` when the task is about
 
+- Kotlin UI DSL v2 (`panel { row { } }`, `BoundConfigurable`)
 - dialogs and IntelliJ UI components
 - tool windows
 - settings/configurables
 - persistent state
 - notifications
+- popups (`JBPopup`, `ListPopup`, chooser popups)
 - project wizard, module type, project view integration
 
 ### Read `references/testing-and-publishing.md` when the task is about
@@ -145,10 +155,11 @@ When solving IntelliJ Platform tasks:
 ## High-value reminders
 
 - `AnAction` implementations should not store request-specific state in fields.
-- On modern platform versions, actions should implement `getActionUpdateThread()`.
+- Actions must implement `getActionUpdateThread()` (required since 2022.3).
 - PSI/document changes must happen inside write commands.
 - Not every feature is safe in dumb mode; do not mark things `DumbAware` casually.
-- For Kotlin plugins on recent platform versions, prefer coroutine-based read/write APIs when appropriate.
+- For Kotlin plugins on 2024.1+, prefer coroutine-based read/write APIs when appropriate.
+- Light services must be `final` and must not inject dependency services via constructors.
 - Avoid internal APIs unless there is no viable public alternative and the tradeoff is explicit.
 
 ## Typical response strategy

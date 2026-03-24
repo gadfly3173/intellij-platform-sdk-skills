@@ -4,8 +4,10 @@ Common extension points for IntelliJ Platform plugins.
 
 ## Actions
 
+Actions are registered under a top-level `<actions>` block in `plugin.xml`, not inside `<extensions>`.
+
 ```xml
-<extensions defaultExtensionNs="com.intellij">
+<actions>
     <!-- Action -->
     <action id="unique.id"
             class="com.example.MyAction"
@@ -23,7 +25,7 @@ Common extension points for IntelliJ Platform plugins.
            icon="/icons/group.svg">
         <add-to-group group-id="MainMenu" anchor="after" relative-to-action="ToolsMenu"/>
     </group>
-</extensions>
+</actions>
 ```
 
 ## Services
@@ -40,7 +42,7 @@ Common extension points for IntelliJ Platform plugins.
         serviceInterface="com.example.MyProjectService"
         serviceImplementation="com.example.MyProjectServiceImpl"/>
 
-    <!-- Module service -->
+    <!-- Module service (not recommended — increases memory) -->
     <moduleService
         serviceImplementation="com.example.MyModuleService"/>
 </extensions>
@@ -67,11 +69,11 @@ Common extension points for IntelliJ Platform plugins.
 
     <!-- Enter handler -->
     <enterHandlerDelegate
-        implementationClass="com.example.MyEnterHandler"/>
+        implementation="com.example.MyEnterHandler"/>
 
     <!-- Typed handler -->
     <typedHandler
-        implementationClass="com.example.MyTypedHandler"/>
+        implementation="com.example.MyTypedHandler"/>
 </extensions>
 ```
 
@@ -115,10 +117,10 @@ Common extension points for IntelliJ Platform plugins.
         language="Simple"
         implementationClass="com.example.SimpleParserDefinition"/>
 
-    <!-- Syntax highlighter -->
-    <lang.syntaxHighlighter
+    <!-- Syntax highlighter factory -->
+    <lang.syntaxHighlighterFactory
         language="Simple"
-        implementationClass="com.example.SimpleSyntaxHighlighter"/>
+        implementationClass="com.example.SimpleSyntaxHighlighterFactory"/>
 
     <!-- Commenter -->
     <lang.commenter
@@ -141,11 +143,11 @@ Common extension points for IntelliJ Platform plugins.
         implementationClass="com.example.SimpleFoldingBuilder"/>
 
     <!-- Structure view -->
-    <lang.structureViewFactory
+    <lang.psiStructureViewFactory
         language="Simple"
         implementationClass="com.example.SimpleStructureViewFactory"/>
 
-    <!-- Documentation -->
+    <!-- Documentation (obsolete — consider newer documentation API) -->
     <lang.documentationProvider
         language="Simple"
         implementationClass="com.example.SimpleDocumentationProvider"/>
@@ -189,8 +191,7 @@ Common extension points for IntelliJ Platform plugins.
     <!-- Notification group -->
     <notificationGroup
         id="MyPlugin.Notification"
-        displayType="BALLOON"
-        key="notification.group.name"/>
+        displayType="BALLOON"/>
 </extensions>
 ```
 
@@ -198,18 +199,18 @@ Common extension points for IntelliJ Platform plugins.
 
 ```xml
 <extensions defaultExtensionNs="com.intellij">
-    <!-- Project wizard -->
+    <!-- Project wizard (obsolete — consider newer wizard API) -->
     <moduleType
         id="MY_MODULE"
         implementationClass="com.example.MyModuleType"/>
 
     <!-- Project view decorator -->
     <treeStructureProvider
-        implementationClass="com.example.MyTreeStructureProvider"/>
+        implementation="com.example.MyTreeStructureProvider"/>
 
     <!-- File icon provider -->
     <iconProvider
-        implementationClass="com.example.MyIconProvider"/>
+        implementation="com.example.MyIconProvider"/>
 
     <!-- File editor provider -->
     <fileEditorProvider
@@ -269,9 +270,8 @@ Common extension points for IntelliJ Platform plugins.
         language="Simple"
         extensions="simple"/>
 
-    <!-- File type factory (deprecated, use fileType) -->
-    <fileTypeFactory
-        implementation="com.example.SimpleFileTypeFactory"/>
+    <!-- File type factory (deprecated since 2019.2, use fileType instead) -->
+    <!-- <fileTypeFactory implementation="com.example.SimpleFileTypeFactory"/> -->
 </extensions>
 ```
 
@@ -280,7 +280,7 @@ Common extension points for IntelliJ Platform plugins.
 ```xml
 <extensions defaultExtensionNs="com.intellij">
     <!-- Change list decorator -->
-    <changeListDecorator
+    <vcs.changeListDecorator
         implementation="com.example.MyChangeListDecorator"/>
 
     <!-- Checkin handler factory -->

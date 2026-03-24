@@ -46,7 +46,7 @@ if (DumbService.isDumb(project)) {
 }
 ```
 
-Or make the feature `DumbAware` only when it is truly safe.
+Or make the feature `DumbAware` only when it is truly safe. For actions, extend `DumbAwareAction` instead of `AnAction` (do not override `AnAction.isDumbAware()`). For tool windows, implement `DumbAware` on the `ToolWindowFactory`.
 
 ## Editor/document issues
 
@@ -115,11 +115,13 @@ Disposer.register(parent, () -> {
 
 ### Enable internal mode
 
-Add to `idea.properties`:
+From the main menu, select `Help | Edit Custom Properties...` to open (or create) `idea.properties`, then add:
 
 ```properties
 idea.is.internal=true
 ```
+
+Save and restart the IDE.
 
 ### Useful debugging flows
 

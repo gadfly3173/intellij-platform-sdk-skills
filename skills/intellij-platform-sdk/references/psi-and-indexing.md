@@ -21,6 +21,10 @@ Use this reference when the user needs to inspect code structure, resolve symbol
 - `PsiReference`
 - `PsiManager`
 - `PsiTreeUtil`
+- `PsiRecursiveElementWalkingVisitor`
+
+Java PSI classes (require dependency on `com.intellij.modules.java`):
+
 - `JavaPsiFacade`
 - `PsiElementFactory`
 
@@ -45,8 +49,10 @@ Collection<PsiMethod> methods = PsiTreeUtil.findChildrenOfType(psiClass, PsiMeth
 
 ### Creating Java PSI
 
+Note: `PsiElementFactory` is Java-specific and requires a dependency on `com.intellij.modules.java`.
+
 ```java
-PsiElementFactory factory = JavaPsiFacade.getElementFactory(project);
+PsiElementFactory factory = PsiElementFactory.getInstance(project);
 PsiMethod method = factory.createMethodFromText(
     "public void hello() { System.out.println(\"Hello\"); }",
     psiClass
@@ -97,15 +103,15 @@ If the user asks for any of those, inspect references first before implementing 
 
 ### File-based index
 
-Use when you need a fast mapping from keys to files.
+Use when you need a fast mapping from keys to files. Extend `FileBasedIndexExtension` and register via `com.intellij.fileBasedIndex` EP. The index uses Map/Reduce architecture — implement `getIndexer()`, `getKeyDescriptor()`, `getInputFilter()`, `getName()`, and `getVersion()`. For simpler cases with no value, use `ScalarIndexExtension`.
 
 ### Stub index
 
-Use when you need to find declarations/elements quickly without loading full PSI trees.
+Use when you need to find declarations/elements quickly without loading full PSI trees. Requires: (1) change file element type to `IStubFileElementType`, (2) define `StubElement` implementations, (3) make PSI extend `StubBasedPsiElement`, (4) extend `AbstractStubIndex` or `StringStubIndexExtension`. Access data via `StubIndex.getElements()`.
 
 ### Gists
 
-Use file gists for lazily computed, cached per-file data when a full index would be too eager or too expensive.
+Use file gists (`VirtualFileGist` or `PsiFileGist`) for lazily computed, cached per-file data when: (1) aggregation is not needed, (2) eager indexing of the whole project is unnecessary, and (3) the data can be recalculated lazily without significant cost.
 
 ## Indexing performance rules
 

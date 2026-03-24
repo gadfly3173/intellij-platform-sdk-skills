@@ -8,22 +8,22 @@ IntelliJ Platform uses the following versioning scheme:
 
 | Version | Build Number | Format |
 |---------|--------------|--------|
-| 2024.3 | 243.xxxx.xx | YYM.BUILD.PATCH |
-| 2024.2 | 242.xxxx.xx | YYM.BUILD.PATCH |
-| 2024.1 | 241.xxxx.xx | YYM.BUILD.PATCH |
+| 2025.1 | 251.xxxx.xx | BRANCH.BUILD |
+| 2024.3 | 243.xxxx.xx | BRANCH.BUILD |
+| 2024.2 | 242.xxxx.xx | BRANCH.BUILD |
+| 2024.1 | 241.xxxx.xx | BRANCH.BUILD |
 
-Build number format: `YYM` where:
+Build number format: `YYR` where:
 - `YY` = Year (24 = 2024)
-- `M` = Month (1-9 = Jan-Sep, A-C = Oct-Dec)
+- `R` = Release number within the year (1 = first, 2 = second, 3 = third)
+- There is no `YY0` — `R` starts at 1
 
 ## Gradle Plugin Versions
 
-| IntelliJ Platform Gradle Plugin | Minimum Gradle | Notes |
-|--------------------------------|----------------|-------|
-| 2.2.x | 8.5 | Current stable |
-| 2.1.x | 8.5 | - |
-| 2.0.x | 8.1 | Major rewrite |
-| 1.x | 7.3 | Legacy |
+| IntelliJ Platform Gradle Plugin | Minimum Gradle | Minimum Platform | Notes |
+|--------------------------------|----------------|------------------|-------|
+| 2.x (current: 2.13.1) | 8.13 | 2022.3 | Current |
+| 1.x (legacy) | 7.3 | — | Legacy, use 2.x for new projects |
 
 ## SDK Migration (1.x to 2.x)
 
@@ -54,7 +54,7 @@ tasks {
 ```kotlin
 plugins {
     id("java")
-    id("org.jetbrains.intellij.platform") version "2.2.0"
+    id("org.jetbrains.intellij.platform") version "2.13.1"
 }
 
 repositories {
@@ -66,7 +66,7 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        intellijIdeaCommunity("2024.3")
+        intellijIdea("2024.3")
         bundledPlugin("com.intellij.java")
     }
 }
@@ -86,14 +86,19 @@ intellijPlatform {
 | Aspect | 1.x | 2.x |
 |--------|-----|-----|
 | Plugin ID | `org.jetbrains.intellij` | `org.jetbrains.intellij.platform` |
-| IDE Version | `intellij.version` | `intellijPlatform { intellijIdeaCommunity() }` |
+| IDE Version | `intellij.version` | `intellijPlatform { intellijIdea() }` |
 | Plugins | `intellij.plugins` | `intellijPlatform { bundledPlugin() }` |
 | Patching | `patchPluginXml` | `pluginConfiguration` |
 | Repositories | Automatic | Explicit `intellijPlatform { defaultRepositories() }` |
+| Verifier task | `runPluginVerifier` | `verifyPlugin` |
+
+### Migration Helper
+
+A migration plugin `org.jetbrains.intellij.platform.migration` is available to help with the transition. Apply it alongside the old plugin to get migration assistance and warnings.
 
 ## API Compatibility
 
-### Since/UnUntil Build
+### Since/Until Build
 
 ```xml
 <!-- plugin.xml -->
@@ -102,6 +107,7 @@ intellijPlatform {
 
 | Version | Build | Since |
 |---------|-------|-------|
+| 2025.1 | 251.xxx | 251 |
 | 2024.3 | 243.xxx | 243 |
 | 2024.2 | 242.xxx | 242 |
 | 2024.1 | 241.xxx | 241 |
@@ -111,52 +117,67 @@ intellijPlatform {
 
 ### Notable API Changes
 
+#### 2025.1
+- Notable: `ContainerUtil` methods marked `@Unmodifiable` now return truly unmodifiable collections (internal/test mode for now)
+- Notable: Kotlin 2.x required for plugin compilation
+- Notable: K2 Kotlin mode enabled by default in IntelliJ IDEA
+
 #### 2024.3
-- New: `ActionUpdateThread.getActionUpdateThread()` required
-- New: `DumbAware` marker interface for extension points
-- Deprecation: `AnAction.isDumbAware()` override
+- Breaking: JSON plugin extracted — add `<depends>com.intellij.modules.json</depends>` and `bundledModule("com.intellij.modules.json")` in Gradle
+- Breaking: JUnit library unbundled — add explicit test dependency
+- Notable: `ParsingTestCase` now verifies reparsing causes no changes
+- Notable: Dumb-aware "Highlight Usages" support
 
 #### 2024.2
-- New: Intention actions can be `DumbAware`
-- New: `LightProjectDescriptor` for tests
+- Notable: Intention actions and quick-fixes can be `DumbAware`
+- Notable: Workspace Model API replaces project model
+- Breaking: `TabInfo` constructor requires non-null `JComponent`
+- Notable: `ToggleAction` no longer closes popups
 
 #### 2024.1
-- New: `VirtualFileGist` and `PsiFileGist`
-- Deprecation: `FileTypeFactory`
+- Notable: Bundled localization capabilities for plugins
+- Notable: Kotlin coroutines recommended for asynchronous code
+- Notable: Highlighting runs more efficiently (inspections and annotators in parallel)
+- Notable: Cached values interact with dumb mode
 
 #### 2023.3
-- New: `ActionUpdateThread` enum
-- Required: Override `getActionUpdateThread()` in actions
+- Breaking: Threading model enforcement tightened
+- Breaking: `commons-lang2` and `commons-collections` libraries removed from platform
+- Breaking: JsonPath library unbundled
+- Notable: External annotators can run in dumb mode
 
 #### 2023.2
-- New: IntelliJ Platform Gradle Plugin 2.0
-- Breaking: Gradle 8.1+ required
+- Notable: Language Server Protocol (LSP) API introduced
+- Notable: Inspection descriptions support syntax-highlighted code snippets
 
 #### 2023.1
-- New: Lazy service initialization
-- New: `@Service` with level parameter
+- Notable: Declarative inspection options
+- Notable: `DocumentationTarget` API for quick documentation (replaces `lang.documentationProvider`)
+- Notable: `@ApiStatus.Obsolete` annotation introduced
+- Notable: Annotators can implement `DumbAware` (run during indexing)
 
 ## Language Level Compatibility
 
-| IntelliJ Platform | Java | Kotlin |
-|-------------------|------|--------|
-| 2024.3 | 21 | 2.0 |
-| 2024.2 | 21 | 1.9 |
-| 2024.1 | 17 | 1.9 |
-| 2023.3 | 17 | 1.9 |
-| 2023.2 | 17 | 1.8 |
-| 2023.1 | 17 | 1.8 |
+| IntelliJ Platform | Java | Bundled Kotlin stdlib |
+|-------------------|------|-----------------------|
+| 2025.1 | 21 | 2.1.10 |
+| 2024.3 | 21 | 2.0.21 |
+| 2024.2 | 21 | 1.9.24 |
+| 2024.1 | 17 | 1.9.22 |
+| 2023.3 | 17 | 1.9.21 |
+| 2023.2 | 17 | 1.8.20 |
+| 2023.1 | 17 | 1.8.0 |
+
+Kotlin 2.x is recommended for plugins targeting 2024.3+ and **required** for 2025.1+. Plugins supporting multiple platform versions must target the lowest bundled stdlib version.
 
 ## Target IDE Compatibility
 
 ### Plugin Targets
 
-| IDE | Artifact | Notes |
-|-----|----------|-------|
-| IntelliJ IDEA Community | `intellijIdeaCommunity()` | Free, open source |
-| IntelliJ IDEA Ultimate | `intellijIdeaUltimate()` | Commercial |
-| PyCharm Community | `pycharmCommunity()` | Python IDE |
-| PyCharm Professional | `pycharmProfessional()` | Commercial |
+| IDE | Gradle Dependency | Notes |
+|-----|-------------------|-------|
+| IntelliJ IDEA | `intellijIdea()` | Community + Ultimate |
+| PyCharm | `pycharm()` | Community + Professional |
 | WebStorm | `webstorm()` | JavaScript IDE |
 | PhpStorm | `phpstorm()` | PHP IDE |
 | GoLand | `goland()` | Go IDE |
@@ -164,6 +185,7 @@ intellijPlatform {
 | CLion | `clion()` | C/C++ IDE |
 | DataGrip | `datagrip()` | Database IDE |
 | RubyMine | `rubymine()` | Ruby IDE |
+| RustRover | `rustRover()` | Rust IDE |
 | Android Studio | `androidStudio()` | Android IDE |
 
 ### Dependency Declaration
@@ -176,28 +198,20 @@ intellijPlatform {
 <depends>com.intellij.modules.java</depends>
 
 <!-- For Python-specific plugins -->
-<depends optional="true">PythonCore</depends>
+<depends optional="true" config-file="withPython.xml">PythonCore</depends>
 
 <!-- For JavaScript-specific plugins -->
-<depends optional="true">JavaScript</depends>
+<depends optional="true" config-file="withJavaScript.xml">JavaScript</depends>
 ```
 
 ## Testing Compatibility
-
-### Test Framework Versions
-
-| Platform Version | Test Framework | Notes |
-|------------------|----------------|-------|
-| 2024.3 | `com.jetbrains.intellij.platform:test-framework` | New in 2.x |
-| 2024.2 | `com.jetbrains.intellij.platform:test-framework` | New in 2.x |
-| Legacy | `com.jetbrains.intellij.java:java-test-framework` | 1.x style |
 
 ### Test Dependencies (2.x)
 
 ```kotlin
 dependencies {
     intellijPlatform {
-        intellijIdeaCommunity("2024.3")
+        intellijIdea("2024.3")
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
     }
@@ -208,49 +222,22 @@ dependencies {
 
 ## Breaking Changes Log
 
-### 2024.3 Breaking Changes
-- `AnAction.isDumbAware()` should not be overridden
-- Use `DumbAwareAction` or `getActionUpdateThread()` instead
-
-### 2024.2 Breaking Changes
-- `FileTypeFactory` removed (deprecated since 2020.1)
-- Use `<fileType>` extension point instead
-
-### 2023.3 Breaking Changes
-- `ActionUpdateThread.REQUIRED` added
-- Must override `getActionUpdateThread()` in all actions
-
-### 2023.2 Breaking Changes
-- Gradle 8.1+ required for 2.x plugin
-- Kotlin DSL syntax changes
-
-### 2023.1 Breaking Changes
-- `ServiceManager` deprecated
-- Use `getService()` on Application/Project/Module instead
-
-### 2022.3 Breaking Changes
-- `ActionUpdateThread` introduced
-- Threading model enforcement
-
-### 2022.2 Breaking Changes
-- `DataKeys` removed
-- Use `CommonDataKeys` instead
-
-### 2022.1 Breaking Changes
-- `InspectionProfileEntry` constructor changes
-- `GlobalInspectionTool` API changes
+### 2022.3
+- Notable: `ActionUpdateThread` — `getActionUpdateThread()` required in all actions
+- Threading model enforcement begins
 
 ## Migration Checklist
 
 ### From 1.x to 2.x
 
-- [ ] Update plugin ID in `build.gradle.kts`
-- [ ] Add `intellijPlatform { defaultRepositories() }`
-- [ ] Move IDE version to `dependencies { intellijPlatform {} }`
-- [ ] Update plugin dependencies syntax
+- [ ] Update plugin ID to `org.jetbrains.intellij.platform`
+- [ ] Add `intellijPlatform { defaultRepositories() }` in repositories
+- [ ] Move IDE version to `dependencies { intellijPlatform { intellijIdea("...") } }`
+- [ ] Update bundled plugin dependencies syntax
 - [ ] Update `patchPluginXml` to `pluginConfiguration`
-- [ ] Update test dependencies
-- [ ] Verify Gradle version (8.5+)
+- [ ] Update test dependencies (`testFramework(TestFrameworkType.Platform)`)
+- [ ] Verify Gradle version (8.13+ required for 2.x)
+- [ ] Note: `runPluginVerifier` task renamed to `verifyPlugin` in 2.x
 - [ ] Test plugin functionality
 
 ### General Version Updates
@@ -264,14 +251,25 @@ dependencies {
 
 ## Plugin Verifier
 
-Run the plugin verifier to check compatibility:
+Configure IDE versions for verification in `build.gradle.kts`:
+
+```kotlin
+intellijPlatform {
+    pluginVerification {
+        ides {
+            recommended()
+            // or specific versions:
+            // ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.2")
+            // ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.3")
+        }
+    }
+}
+```
+
+Then run:
 
 ```bash
 ./gradlew verifyPlugin
 ```
 
-Or with specific IDE versions:
-
-```bash
-./gradlew verifyPlugin -PideVersions=IC-2024.3,IC-2024.2
-```
+Note: In 1.x, the task was called `runPluginVerifier`. In 2.x, IDE versions are configured in the build script, not via CLI parameters.

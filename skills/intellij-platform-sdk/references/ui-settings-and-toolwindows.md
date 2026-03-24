@@ -5,10 +5,12 @@ Use this reference when the user needs dialogs, tool windows, settings pages, no
 ## What this file covers
 
 - dialogs and IntelliJ UI components
+- Kotlin UI DSL v2
 - tool windows
 - settings/configurables
 - persistent state
 - notifications
+- popups (JBPopup, ListPopup)
 - project wizard and project-view integration
 
 ## UI principles
@@ -20,9 +22,118 @@ Useful classes include:
 - `DialogWrapper`
 - `SimpleToolWindowPanel`
 - `JBTextField`, `JBCheckBox`, `JBList`, `Tree`
-- `FormBuilder`
-- `ScrollPaneFactory`
-- `NotificationGroupManager`
+- `JBScrollPane`
+
+## Kotlin UI DSL v2
+
+The modern way to build settings panels, dialogs, and forms in IntelliJ Platform (since 2021.3). Prefer this over raw Swing layout for new code.
+
+**Important caveat:** The DSL is designed for settings panels, dialogs, and forms with input components bound to state objects. It is NOT intended for general UIs like tool window controls that trigger actions without input binding — use custom Swing components for those.
+
+### Core structure
+
+```kotlin
+panel {
+    group("General") {
+        row("Name:") {
+            textField()
+                .bindText(settings::name)
+                .align(AlignX.FILL)
+        }
+        row {
+            checkBox("Enable feature")
+                .bindSelected(settings::enabled)
+        }
+    }
+    collapsibleGroup("Advanced") {
+        row("Timeout (ms):") {
+            intTextField()
+                .bindIntText(settings::timeout)
+        }
+    }
+}
+```
+
+### Key building blocks
+
+- `panel { }` — top-level container
+- `row("Label:") { }` — a row with optional left-aligned label
+- `group("Title") { }` — titled section with its own grid
+- `collapsibleGroup("Title") { }` — expandable section
+- `buttonsGroup { }` — radio button group
+- `indent { }` — indented sub-section
+- `separator()` — horizontal divider
+
+### Data binding
+
+```kotlin
+row("Text:") {
+    textField()
+        .bindText(model::textField)
+}
+row {
+    checkBox("Enabled")
+        .bindSelected(model::checkbox)
+}
+row("Color:") {
+    comboBox(listOf("Red", "Green", "Blue"))
+        .bindItem(model::color)
+}
+```
+
+### Conditional visibility and enabled state
+
+Use `visibleIf` for conditional visibility and `enabledIf` for conditional enabled state. Both can be applied at `Row` or `Cell` level:
+
+```kotlin
+lateinit var enabledCheckbox: Cell<JBCheckBox>
+
+row {
+    enabledCheckbox = checkBox("Enable advanced mode")
+        .bindSelected(settings::advancedMode)
+}
+row("Detail:") {
+    textField()
+        .bindText(settings::detail)
+        .enabledIf(enabledCheckbox.selected)  // Cell-level enabledIf
+}
+// Or at row level:
+row("Advanced:") {
+    textField()
+}.enabledIf(enabledCheckbox.selected)  // Row-level enabledIf
+```
+
+### With BoundConfigurable
+
+The simplest way to create a settings page:
+
+```kotlin
+class MySettingsConfigurable : BoundConfigurable("My Plugin Settings") {
+    override fun createPanel() = panel {
+        row("API key:") {
+            cell(JPasswordField())
+                .bind(
+                    { component -> String(component.password) },
+                    { component, value -> component.text = value },
+                    settings::apiKey.toMutableProperty()
+                )
+                .align(AlignX.FILL)
+        }
+    }
+}
+```
+
+`BoundConfigurable` automatically handles `apply()`, `reset()`, and `isModified()` through bindings.
+
+### Lifecycle callbacks on panel
+
+```kotlin
+panel {
+    onApply { /* called when user clicks Apply/OK */ }
+    onReset { /* called when UI resets to stored values */ }
+    onIsModified { /* return true if there are unsaved changes */ }
+}
+```
 
 ## Dialogs
 
@@ -40,17 +151,23 @@ Use `DialogWrapper` when the dialog has validation, multiple fields, custom butt
 
 - `ToolWindowFactory`
 - `ToolWindow`
-- `ContentFactory`
-- `ContentManager`
+- `ContentFactory` (use `ContentFactory.getInstance().createContent()` to create content)
 - `SimpleToolWindowPanel`
 - `ActionToolbar`
 
 ### Tool-window pattern
 
-1. Register tool window in `plugin.xml`
-2. Create panel/content in `ToolWindowFactory`
+1. Register tool window in `plugin.xml` via `com.intellij.toolWindow` EP
+2. Create panel/content in `ToolWindowFactory.createToolWindowContent()`
 3. Add toolbar if actions make sense
 4. Keep heavy loading deferred when possible
+
+### Important notes
+
+- Tool windows are disabled during indexing unless `ToolWindowFactory` implements `DumbAware`
+- Use `ToolWindowFactory.isApplicableAsync(Project)` (since 2023.3) for conditional display
+- For programmatic tool windows (shown after specific actions), use `ToolWindowManager.registerToolWindow()`
+- Use `ToolWindowManager.invokeLater()` instead of `Application.invokeLater()` for EDT tasks related to tool windows
 
 ## Settings and persistent state
 
@@ -60,23 +177,110 @@ Use `PersistentStateComponent` with `@State` when the user needs plugin settings
 
 ### Settings UI
 
-Use `Configurable` or modern configurable helpers when the user needs a page in Settings/Preferences.
+Register settings pages using the appropriate extension point:
+
+- `com.intellij.applicationConfigurable` — application-level settings (no-arg constructor)
+- `com.intellij.projectConfigurable` — project-level settings (constructor takes `Project`)
+
+Both require `id`, `displayName` (or `key`+`bundle`), and `parentId` attributes. Common `parentId` values: `tools`, `editor`, `appearance`, `build`, `language`.
 
 ### Typical split
 
 - settings state class/service
-- UI component/panel
-- configurable wrapper
+- UI component/panel (prefer Kotlin UI DSL v2)
+- configurable wrapper implementing `Configurable`
 
 ## Notifications
 
 Use the platform notification system instead of custom popups for normal plugin feedback.
 
-Typical uses:
+### Setup
 
-- success/failure summaries
-- background-task completion
-- actionable warnings with follow-up buttons
+1. Declare a notification group in `plugin.xml`:
+
+```xml
+<notificationGroup id="MyPlugin.Notifications" displayType="BALLOON"/>
+```
+
+Display types: `BALLOON` (timed), `STICKY_BALLOON` (sticky suggestion), `TOOL_WINDOW` (in tool window), `NONE`.
+
+2. Create and show notifications:
+
+```java
+new Notification("MyPlugin.Notifications", "Task completed", NotificationType.INFORMATION)
+    .addAction(NotificationAction.createSimpleExpiring("View", () -> showResults()))
+    .notify(project);
+```
+
+### Typical uses
+
+- success/failure summaries (`BALLOON`)
+- background-task completion (`BALLOON`)
+- actionable warnings with follow-up buttons (`STICKY_BALLOON`)
+- tool window log output (`TOOL_WINDOW`)
+
+## Popups (JBPopup)
+
+Use `JBPopupFactory` for lightweight popup menus, choosers, and inline UI.
+
+### Popup types
+
+| Factory method | Use case |
+|---------------|----------|
+| `createPopupChooserBuilder()` | Select item from a list |
+| `createActionGroupPopup()` | Show and execute actions |
+| `createComponentPopupBuilder()` | Display any Swing component |
+| `createConfirmation()` | Yes/no confirmation |
+
+### List chooser
+
+```java
+JBPopupFactory.getInstance()
+    .createPopupChooserBuilder(items)
+    .setTitle("Choose Item")
+    .setItemChosenCallback(item -> {
+        // handle selection
+    })
+    .createPopup()
+    .showInBestPositionFor(editor);
+```
+
+### Action group popup
+
+```java
+JBPopupFactory.getInstance()
+    .createActionGroupPopup(
+        "Title",
+        actionGroup,
+        dataContext,
+        JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+        true // show disabled actions
+    )
+    .showUnderneathOf(component);
+```
+
+### ListPopup with steps
+
+For hierarchical or customized list popups:
+
+```java
+ListPopupStep<String> step = new BaseListPopupStep<>("Title", items) {
+    @Override
+    public PopupStep<?> onChosen(String selectedValue, boolean finalChoice) {
+        // return FINAL_CHOICE or a new step for sub-menu
+        return doFinalStep(() -> handleSelection(selectedValue));
+    }
+};
+JBPopupFactory.getInstance().createListPopup(step).showInBestPositionFor(editor);
+```
+
+### Display methods
+
+- `showInBestPositionFor(editor)` — near caret
+- `showUnderneathOf(component)` — below a component
+- `showInCenterOf(component)` — centered on a component
+
+Note: `show()` returns immediately; use `addListener(JBPopupListener)` to detect closing, or override `PopupStep.onChosen()` for step-based popups.
 
 ## Project integration
 
@@ -92,8 +296,9 @@ If the user asks for project-level UX changes, consider these hooks:
 
 - one-off command entry → action
 - persistent side panel → tool window
-- plugin preferences → settings page
+- plugin preferences → settings page (prefer Kotlin UI DSL v2)
 - short status/feedback → notification
+- quick item selection / context menu → `JBPopup`
 - multi-step structured user input → `DialogWrapper`
 - project creation flow → wizard/module/project template APIs
 

@@ -16,17 +16,17 @@ Choose the lightest test type that still matches the feature.
 
 ### Common test bases
 
-- `BasePlatformTestCase`
-- `LightPlatformTestCase`
-- `LightJavaCodeInsightFixtureTestCase`
-- `HeavyPlatformTestCase`
-- `ParsingTestCase`
+- `BasePlatformTestCase` — fixture-based, generally preferred for light tests
+- `LightPlatformTestCase` — alternative for non-fixture light tests
+- `LightJavaCodeInsightFixtureTestCase` — Java-specific (JUnit 3); also available as `LightJavaCodeInsightFixtureTestCase4` (JUnit 4), `LightJavaCodeInsightFixtureTestCase5` (JUnit 5)
+- `HeavyPlatformTestCase` — full project/platform environment
+- `IdeaTestFixtureFactory` — manual fixture creation (not tied to a base class)
 
 ## When to use what
 
 - PSI/editor feature in a lightweight environment → light fixture test
 - Java-specific editor/code insight behavior → `LightJavaCodeInsightFixtureTestCase`
-- parser snapshots / PSI tree expectations → `ParsingTestCase`
+- parser snapshots / PSI tree expectations → extend `ParsingTestCase` from `com.intellij.testFramework`
 - full project / heavier platform behavior → `HeavyPlatformTestCase`
 
 ## Typical test flows
@@ -57,14 +57,15 @@ Choose the lightest test type that still matches the feature.
 
 ## Test-data conventions
 
-Keep stable fixtures under `src/test/testData` and prefer readable before/after files for inspections, intentions, and formatting behavior.
+Keep stable fixtures under `src/test/testData` and prefer readable before/after files for inspections, intentions, and formatting behavior. Naming convention: `*.java` and `*.after.java` pairs for before/after comparisons. Use XML-like markup tags like `<warning descr="...">code</warning>` in test files for highlighting assertions.
 
 ## Verifier and compatibility checks
 
 Always consider plugin verification when the user asks about shipping or IDE-version support.
 
 ```bash
-./gradlew verifyPlugin
+./gradlew verifyPlugin    # 2.x Gradle Plugin
+./gradlew runPluginVerifier  # 1.x Gradle Plugin (different task name!)
 ```
 
 If multiple IDE versions matter, verify against all intended targets.
@@ -89,19 +90,31 @@ Typical tasks:
 
 ## Signing inputs
 
-Common environment-backed inputs:
+Configure signing and publishing in `build.gradle.kts` using the 2.x DSL:
 
-- certificate chain
-- private key
-- private key password
-- Marketplace publish token
+```kotlin
+intellijPlatform {
+    signing {
+        certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
+        // or: certificateChainFile = file("/path/to/chain.crt")
+        privateKey = providers.environmentVariable("PRIVATE_KEY")
+        // or: privateKeyFile = file("/path/to/private.pem")
+        password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
+    }
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
+        // token is a JetBrains Marketplace Personal Access Token (from Marketplace profile > My Tokens)
+    }
+}
+```
 
-Do not hardcode secrets into Gradle files or committed properties.
+Do not hardcode secrets into Gradle files or committed properties. Use environment variables or Gradle properties passed at build time.
 
 ## Release guidance
 
 Before release, verify:
 
+- **First-time upload must be manual** — the first plugin publication to Marketplace cannot be automated
 - `sinceBuild` / `untilBuild` are sensible
 - required dependencies are correct
 - optional integrations degrade gracefully

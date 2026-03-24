@@ -46,7 +46,7 @@ public class SimpleLanguage extends Language {
 ```
 
 ```java
-public class SimpleFileType extends LanguageFileType {
+public final class SimpleFileType extends LanguageFileType {
     public static final SimpleFileType INSTANCE = new SimpleFileType();
 
     private SimpleFileType() {
@@ -54,8 +54,23 @@ public class SimpleFileType extends LanguageFileType {
     }
 
     @Override
+    public @NotNull String getName() {
+        return "Simple File";
+    }
+
+    @Override
+    public @NotNull String getDescription() {
+        return "Simple language file";
+    }
+
+    @Override
     public @NotNull String getDefaultExtension() {
         return "simple";
+    }
+
+    @Override
+    public Icon getIcon() {
+        return SimpleIcons.FILE;
     }
 }
 ```
@@ -86,7 +101,11 @@ Typical pieces:
 
 ### Annotator
 
-Use for lightweight, often on-the-fly highlighting and inline diagnostics.
+Use for lightweight, often on-the-fly highlighting and inline diagnostics. Register via `com.intellij.annotator` EP with `language` attribute. Annotators can implement `DumbAware` to run during indexing (since 2023.1).
+
+### External annotator
+
+Use `ExternalAnnotator` when validation depends on an external tool (linter, compiler). Runs in a separate phase after other annotators.
 
 ### Inspection
 
@@ -116,6 +135,8 @@ Use as a remediation attached to an inspection/annotation problem.
 ## Quick-fix pattern
 
 - implement `LocalQuickFix`
+- override `applyFix(Project, ProblemDescriptor)` and `getFamilyName()`
+- use `ProblemDescriptor.getPsiElement()` to get the element to fix
 - keep fix text user-readable
 - perform PSI changes in write command
 
@@ -137,7 +158,8 @@ If the user asks for any of these, you likely need the matching extension point(
 
 ## Kotlin-specific notes
 
-- Do not use `object` for extension-point implementations
+- Do not use `object` for extension-point implementations (exception: `FileType` is allowed as `object`)
+- Do not use companion objects with `@JvmStatic` in EP implementations in plugins (use top-level or check inspection)
 - Prefer classes with lightweight constructors
 - Prefer coroutine-based read/write APIs on recent platform versions
 

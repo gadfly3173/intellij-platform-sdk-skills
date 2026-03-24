@@ -17,17 +17,16 @@ Demonstrates basic action system concepts.
 - Context awareness
 
 ### code_inspection_qodana
-Shows how to integrate with Qodana for code inspections.
+Custom inspection with Qodana integration. Multi-module Kotlin project demonstrating how to run custom inspections through Qodana CLI.
 
 **Key Classes:**
-- Custom inspections
-- Qodana integration
+- `ServicePackageClassNameInspection` - Custom inspection (Kotlin)
 
 ### comparing_string_references_inspection
-Inspection that compares string references using `==` instead of `equals()`.
+Inspection that detects when String expressions are compared using `==` or `!=` instead of `.equals()`, with a quick fix to convert them.
 
 **Key Classes:**
-- `CompareStringReferencesInspection` - Local inspection tool
+- `ComparingStringReferencesInspection` - Local inspection tool (extends `AbstractBaseJavaLocalInspectionTool`)
 
 **Concepts:**
 - Local inspection
@@ -38,7 +37,7 @@ Inspection that compares string references using `==` instead of `equals()`.
 Intention to convert conditional operator to if statement and vice versa.
 
 **Key Classes:**
-- `ConditionalOperatorIntention` - Intention action
+- `ConditionalOperatorConverter` - Intention action (extends `PsiElementBaseIntentionAction`)
 
 **Concepts:**
 - Intention actions
@@ -71,8 +70,7 @@ Module facet implementation.
 Framework support implementation.
 
 **Key Classes:**
-- `DemoFrameworkType` - Framework type
-- `DemoFrameworkSupportProvider` - Framework support
+- `DemoFramework` - Framework type (extends `FrameworkTypeEx`)
 
 **Concepts:**
 - Framework detection
@@ -93,7 +91,8 @@ Live templates implementation.
 Limits the number of open projects.
 
 **Key Classes:**
-- Project manager listener
+- `ProjectCloseListener` - Project lifecycle listener
+- `ProjectCountingService` - Tracks open project count
 
 **Concepts:**
 - Project lifecycle
@@ -124,7 +123,7 @@ Project model manipulation.
 Custom project view pane.
 
 **Key Classes:**
-- `DemoProjectViewPane` - Project view pane
+- `ImagesProjectViewPane` - Project view pane
 
 **Concepts:**
 - Project view customization
@@ -134,7 +133,7 @@ Custom project view pane.
 Custom project wizard steps.
 
 **Key Classes:**
-- `DemoProjectWizardStep` - Wizard step
+- `DemoModuleWizardStep` - Module wizard step
 
 **Concepts:**
 - Project wizard
@@ -157,6 +156,7 @@ Custom run configuration.
 **Key Classes:**
 - `DemoRunConfigurationType` - Configuration type
 - `DemoRunConfiguration` - Run configuration
+- `DemoConfigurationFactory` - Configuration factory
 - `DemoSettingsEditor` - Settings editor
 
 **Concepts:**
@@ -217,8 +217,7 @@ UI theme customization.
 Tool window implementation.
 
 **Key Classes:**
-- `DemoToolWindowFactory` - Tool window factory
-- `DemoToolWindowContent` - Tool window content
+- `CalendarToolWindowFactory` - Tool window factory
 
 **Concepts:**
 - Tool windows
@@ -228,7 +227,7 @@ Tool window implementation.
 Custom tree structure provider.
 
 **Key Classes:**
-- `DemoTreeStructureProvider` - Tree structure provider
+- `TextOnlyTreeStructureProvider` - Tree structure provider
 
 **Concepts:**
 - Project view tree

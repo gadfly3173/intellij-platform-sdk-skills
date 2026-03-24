@@ -27,7 +27,7 @@ Check:
 
 ```kotlin
 plugins {
-    id("org.jetbrains.intellij.platform.settings") version "2.2.0"
+    id("org.jetbrains.intellij.platform.settings") version "2.13.1"
 }
 ```
 
@@ -38,7 +38,7 @@ Use the correct bundled plugin ID for the selected IDE.
 ```kotlin
 dependencies {
     intellijPlatform {
-        intellijIdeaCommunity("2024.3")
+        intellijIdea("2024.3")
         bundledPlugin("com.intellij.java")
     }
 }
