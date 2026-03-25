@@ -200,7 +200,7 @@ Implement `DocumentationTarget` to provide rendered HTML documentation. Use `Doc
 
 ### DocumentationProvider (pre-2023.1 / compatibility path)
 
-The legacy `lang.documentationProvider` EP is deprecated since 2023.1. For new code, prefer the DocumentationTarget API; keep `DocumentationProvider` only when supporting older platform lines or existing legacy implementations.
+For new 2023.1+ code, prefer the DocumentationTarget API. Keep `DocumentationProvider` as a legacy compatibility path when supporting older platform lines or existing implementations.
 
 ## Inlay hints
 

@@ -1,11 +1,12 @@
 # Testing and Publishing
 
-Use this reference when the user needs test fixtures, parser tests, code-insight tests, plugin verification, signing, or Marketplace release steps.
+Use this reference when the user needs fixture-based tests, integration/UI tests, parser tests, code-insight tests, plugin verification, signing, or Marketplace release steps.
 
 ## What this file covers
 
 - light and heavy tests
 - fixture-based code insight testing
+- integration and UI testing with Starter/Driver
 - parser/completion/inspection tests
 - plugin verifier
 - signing and publishing
@@ -22,12 +23,33 @@ Choose the lightest test type that still matches the feature.
 - `HeavyPlatformTestCase` — heavier project/platform environment when light tests are insufficient
 - `IdeaTestFixtureFactory` — manual fixture creation when a base class is not the best fit
 
+### Integration and UI testing
+
+Use IntelliJ Platform Starter/Driver when the test must boot a fuller IDE environment, exercise plugin workflows end to end, or interact with real UI surfaces such as tool windows, dialogs, configurables, or notifications.
+
+- **Starter** — prepares the IDE, test project, and test execution environment
+- **Driver** — provides higher-level UI interaction and automation support
+- **JUnit 5 only** — the Starter-based integration/UI testing path is built for JUnit 5, not JUnit 4
+
+For IntelliJ Platform Gradle Plugin 2.x projects, add the Starter test framework dependency when the task is specifically about integration or UI testing:
+
+```kotlin
+dependencies {
+    intellijPlatform {
+        testFramework(TestFrameworkType.Starter, configurationName = "integrationTestImplementation")
+    }
+}
+```
+
+Prefer fixture-based tests for PSI, parser, completion, inspection, and other focused code-insight behavior. Move to Starter/Driver when fidelity matters more than speed.
+
 ## When to use what
 
 - PSI/editor feature in a lightweight environment → light fixture test
 - Java-specific editor/code insight behavior → `LightJavaCodeInsightFixtureTestCase`
 - parser snapshots / PSI tree expectations → extend `ParsingTestCase` from `com.intellij.testFramework`
 - full project / heavier platform behavior → `HeavyPlatformTestCase`
+- end-to-end plugin workflow or UI interaction → Starter/Driver-based integration or UI test
 
 ## Typical test flows
 
@@ -112,6 +134,8 @@ Typical tasks:
 ./gradlew publishPlugin
 ```
 
+When signing inputs are configured, `publishPlugin` runs the required signing step automatically before publishing. Run `signPlugin` explicitly when you want to validate signing output or debug signing configuration separately.
+
 ## Signing inputs
 
 Configure signing and publishing in `build.gradle.kts` using the 2.x DSL:
@@ -135,17 +159,18 @@ intellijPlatform {
 
 Do not hardcode secrets into Gradle files or committed properties. Use environment variables or Gradle properties passed at build time.
 
-Common release channels include `default`, `alpha`, `beta`, `eap`, and custom channels. The first Marketplace upload is typically manual even if later releases are automated.
+Common release channels include `default`, `alpha`, `beta`, `eap`, and custom channels. The first Marketplace upload must always be manual; automated publishing applies only after the plugin has already been published to Marketplace once.
 
 ## Release guidance
 
 Before release, verify:
 
-- **First-time upload is typically manual** — the first plugin publication to Marketplace is usually not automated
+- **First-time upload must be manual** — publish the initial Marketplace version by hand before relying on automated releases
+- if signing is configured, understand that `publishPlugin` will trigger the required signing step automatically
 - `sinceBuild` / `untilBuild` are sensible
 - required dependencies are correct
 - optional integrations degrade gracefully
-- tests cover the changed behavior
+- tests cover the changed behavior, including integration/UI coverage when the feature depends on real IDE workflows
 - verifier is clean or warnings are understood
 
 ## When to also read other references

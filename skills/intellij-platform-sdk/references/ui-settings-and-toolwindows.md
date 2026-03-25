@@ -257,7 +257,7 @@ PasswordSafe.getInstance().set(attrs, new Credentials(username, password));
 Credentials credentials = PasswordSafe.getInstance().get(attrs);
 ```
 
-**Important:** `PasswordSafe.get()` and `set()` are blocking — avoid calling them on EDT. Since 2025.3, use `getAsync()` in coroutines for Remote Development-sensitive flows.
+**Important:** `PasswordSafe.get()` is blocking — avoid calling it on EDT. Since 2025.3, use `getAsync()` in coroutines for Remote Development-sensitive flows. Treat credential writes with the same general care for UI responsiveness, but rely on the official API guidance for the exact operation you are calling.
 
 The concrete credential store depends on the operating system and user/environment configuration. Typical defaults are KeePass (Windows), Keychain (macOS), and Secret Service API (Linux), but do not assume the provider is immutable.
 

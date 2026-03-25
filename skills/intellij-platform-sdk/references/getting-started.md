@@ -318,7 +318,7 @@ For later automated releases, a common task combination is:
 1. `verifyPlugin`
 2. `publishPlugin`
 
-The first Marketplace upload is typically manual. For automated publishing, configure a Marketplace token via Gradle properties or environment variables and read `testing-and-publishing.md` for the fuller release workflow.
+The first Marketplace upload must always be manual. After the plugin has been published to Marketplace once, later automated releases can use Gradle tasks such as `publishPlugin`; if signing is configured, `publishPlugin` will run the required signing step automatically. Read `testing-and-publishing.md` for the fuller release workflow.
 
 ## When to also read other references
 

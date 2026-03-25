@@ -14,12 +14,12 @@ Use this reference when the user wants to integrate a Language Server into an In
 
 ## IDE availability
 
-LSP support in the IntelliJ Platform requires targeting platform version `2023.2` or later and is available only in supported commercial IntelliJ-based IDEs. It is not available in:
+LSP support in the IntelliJ Platform requires targeting platform version `2023.2` or later. It is not available in:
 
 - IntelliJ IDEA Community Edition
 - Android Studio
 
-Available in supported commercial IDEs such as IntelliJ IDEA Ultimate, WebStorm, PhpStorm, DataSpell, RubyMine, CLion, DataGrip, GoLand, Rider, and RustRover. For PyCharm, availability follows the commercial/unified product line described in the official LSP documentation for the target platform version.
+For other JetBrains IDE products, availability depends on the target IDE product and platform version documented for the IntelliJ Platform LSP API. Use the official LSP documentation for the exact IDE/version combination you are targeting rather than assuming a generic "commercial IDE only" rule.
 
 ## When to use LSP vs. native language support
 
@@ -49,7 +49,7 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        // Target a supported commercial IDE product, for example IntelliJ IDEA Ultimate
+        // Target an IDE product/version combination that supports the IntelliJ Platform LSP API
         intellijIdea("2024.3")
     }
 }

@@ -97,6 +97,8 @@ First, identify the user’s real task. Then read only the relevant reference fi
 ### Read `references/testing-and-publishing.md` when the task is about
 
 - test fixtures and plugin tests
+- integration tests or UI tests
+- Starter/Driver-based test setup
 - parser/completion/inspection tests
 - plugin verifier
 - `verifyPluginProjectConfiguration` / `verifyPluginStructure`
@@ -127,7 +129,7 @@ First, identify the user’s real task. Then read only the relevant reference fi
 
 - integrating a Language Server into an IntelliJ Platform plugin
 - `LspServerSupportProvider`, `LspServerDescriptor`, or LSP-specific `plugin.xml` dependencies
-- LSP setup for supported commercial JetBrains IDEs in plugin-development context
+- LSP setup for supported JetBrains IDE products and platform versions in plugin-development context
 - LSP feature support timeline inside the IntelliJ Platform
 - deciding between LSP integration and native IntelliJ language support for a plugin
 
