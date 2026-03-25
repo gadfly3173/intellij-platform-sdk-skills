@@ -30,9 +30,9 @@ my-plugin/
 
 ## Recommended baseline
 
-- JDK 17+ (minimum required by the IntelliJ Platform Gradle Plugin 2.x; JDK 21 recommended for 2025.1+ targets)
+- JDK 17+ (minimum required by the IntelliJ Platform Gradle Plugin 2.x; JDK 21 is the practical baseline for 2024.2+ targets and required for 2025.1+ targets)
 - Gradle 8.13+
-- IntelliJ Platform Gradle Plugin `2.13.1`
+- IntelliJ Platform Gradle Plugin `2.13.1` (example version — verify the current supported version in the official docs before pinning)
 - Prefer Kotlin DSL in Gradle files
 
 ## `build.gradle.kts` template
@@ -73,11 +73,12 @@ intellijPlatform {
         }
         ideaVersion {
             sinceBuild = "243"
-            untilBuild = "243.*"
         }
     }
 }
 ```
+
+`sinceBuild` should match the minimum IDE line you actually support. In most cases, omit `untilBuild` entirely. Only consider restricting the upper bound if you intentionally publish separate plugin versions per major IDE line; for 2025.3+ that strategy uses `strict-until-build`, not a blanket `until-build` in every starter template.
 
 ## `settings.gradle.kts` template
 
@@ -125,25 +126,28 @@ org.gradle.caching=true
 
 ## Target IDE selection
 
-Choose the IDE dependency based on the real target. The function name determines which IDE is used for development and testing:
+Choose the IDE dependency based on the real plugin target. The helper function name determines which product is used for development and testing:
 
-- `intellijIdea("2024.3")` -- IntelliJ IDEA (Community + Ultimate)
-- `pycharm("2024.3")` -- PyCharm
-- `webstorm("2024.3")` -- WebStorm
-- `goland("2024.3")` -- GoLand
-- `rider("2024.3")` -- Rider
-- `clion("2024.3")` -- CLion
-- `phpstorm("2024.3")` -- PhpStorm
-- `rubymine("2024.3")` -- RubyMine
-- `rustRover("2024.3")` -- RustRover
-- `androidStudio("2024.3")` -- Android Studio
-- `datagrip("2024.3")` -- DataGrip
-- `dataspell("2024.3")` -- DataSpell
-- `gateway("2024.3")` -- Gateway
-- `fleetBackend("2024.3")` -- Fleet Backend
-- `mps("2024.3")` -- MPS
+- `intellijIdea("2024.3")` — IntelliJ IDEA target
+- `pycharm("2024.3")` — PyCharm target
+- `webstorm("2024.3")` — WebStorm
+- `goland("2024.3")` — GoLand
+- `rider("2024.3")` — Rider
+- `clion("2024.3")` — CLion
+- `phpstorm("2024.3")` — PhpStorm
+- `rubymine("2024.3")` — RubyMine
+- `rustRover("2024.3")` — RustRover
+- `androidStudio("2024.3")` — Android Studio
+- `datagrip("2024.3")` — DataGrip
+- `dataspell("2024.3")` — DataSpell
+- `gateway("2024.3")` — Gateway
+- `fleetBackend("2024.3")` — Fleet Backend
+- `mps("2024.3")` — MPS
 
-Only add bundled plugins you truly need.
+Notes:
+- Before 2025.3, some products still had separate dependency target types such as `IntellijIdeaCommunity` (`IC`) or `PyCharmCommunity` (`PC`).
+- For 2025.3 and later, use the unified product helpers such as `intellijIdea()` and `pycharm()` instead of deprecated `IC` / `PC` targets.
+- Only add bundled plugins you truly need.
 
 ## `plugin.xml` essentials
 
@@ -151,13 +155,25 @@ Only add bundled plugins you truly need.
 <idea-plugin>
     <id>com.example.myplugin</id>
     <name>My Plugin</name>
+    <version>1.0.0</version>
     <vendor>Gadfly</vendor>
+    <description><![CDATA[
+        Short plugin description. Use CDATA when the description contains HTML.
+    ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- extension points go here -->
     </extensions>
+
+    <applicationListeners>
+        <!-- declarative application listeners go here -->
+    </applicationListeners>
+
+    <projectListeners>
+        <!-- declarative project listeners go here -->
+    </projectListeners>
 
     <actions>
         <!-- actions go here -->
@@ -166,6 +182,8 @@ Only add bundled plugins you truly need.
 ```
 
 Add product/language-specific modules only when needed (e.g. `<depends>com.intellij.modules.java</depends>` for Java-specific PSI).
+
+If the plugin integrates with optional IDE events, prefer declarative listeners in `plugin.xml` via `<applicationListeners>` and `<projectListeners>` instead of eager startup wiring.
 
 ## Dependency strategy
 
@@ -180,7 +198,7 @@ In Gradle, use `bundledPlugin("pluginId")` for bundled plugin dependencies and `
 
 ## Optional dependency pattern
 
-When your plugin has extensions that depend on an optional plugin, use both `optional` and `config-file` attributes. The `config-file` is **required** when `optional` is `true`:
+When an optional dependency only gates plugin availability, `optional="true"` may be enough. When the optional dependency also enables additional extensions, use a separate `config-file` so those extensions are loaded only when the dependency is present:
 
 ```xml
 <depends optional="true"
@@ -217,6 +235,62 @@ dependencies {
 }
 ```
 
+### pluginModule vs pluginComposedModule
+
+- `pluginModule(implementation(project(":sub")))` — places the submodule JAR in `lib/modules/` (separate JAR)
+- `pluginComposedModule(implementation(project(":sub")))` — merges the submodule into the main plugin JAR
+
+Use `pluginModule` for most cases. Use `pluginComposedModule` when the submodule must be in the same classloader as the main module.
+
+## Advanced Gradle configuration
+
+### Split mode (remote development)
+
+Enable split mode for remote development support (requires platform 241.14473+):
+
+```kotlin
+intellijPlatform {
+    splitMode = true  // default: true
+    splitModeTarget = SplitModeTarget.BACKEND  // default
+}
+```
+
+### Additional dependency helpers
+
+```kotlin
+dependencies {
+    intellijPlatform {
+        // Bundled platform modules (not plugins)
+        bundledModule("com.intellij.modules.json")
+
+        // Marketplace plugin dependencies
+        plugin("org.example.someplugin", "1.0.0")
+
+        // Auto-resolve compatible Marketplace version
+        compatiblePlugin("org.example.someplugin")
+
+        // Test-scope dependencies
+        testFramework(TestFrameworkType.Platform)
+        testBundledPlugin("com.intellij.java")
+        testBundledModule("com.intellij.modules.json")
+        testPlugin("org.example.someplugin", "1.0.0")
+    }
+}
+```
+
+### Additional Gradle properties
+
+```properties
+# Opt out of automatic IntelliJ Platform dependencies
+org.jetbrains.intellij.platform.addDefaultIntellijPlatformDependencies=false
+
+# Mute specific verification warnings
+org.jetbrains.intellij.platform.verifyPluginProjectConfigurationMutedMessages=message1,message2
+
+# Custom cache directory
+org.jetbrains.intellij.platform.intellijPlatformCache=/path/to/cache
+```
+
 ## Common setup mistakes
 
 - Using the legacy `org.jetbrains.intellij` plugin instead of `org.jetbrains.intellij.platform`
@@ -226,6 +300,25 @@ dependencies {
 - Targeting Java APIs without `com.intellij.modules.java`
 - Missing `config-file` in optional `<depends>` when separate extensions are needed
 - Using Gradle version below the minimum required by the chosen plugin version
+- Calling `instrumentationTools()` explicitly (deprecated — now auto-applied)
+- Using `IntellijIdeaCommunity` (`IC`) or `PyCharmCommunity` (`PC`) as dependency target for 2025.3+ (use unified `intellijIdea()` / `pycharm()` instead)
+- Not excluding Kotlin stdlib from plugin dependencies (platform bundles it)
+- Adding Kotlin Coroutines explicitly (should not be added; platform provides them)
+
+## Publishing basics
+
+A common first-release flow is:
+
+1. `buildPlugin` (or `signPlugin` if signing is already configured)
+2. install and test the ZIP locally
+3. upload the plugin manually to Marketplace
+
+For later automated releases, a common task combination is:
+
+1. `verifyPlugin`
+2. `publishPlugin`
+
+The first Marketplace upload is typically manual. For automated publishing, configure a Marketplace token via Gradle properties or environment variables and read `testing-and-publishing.md` for the fuller release workflow.
 
 ## When to also read other references
 

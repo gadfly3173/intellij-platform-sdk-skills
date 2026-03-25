@@ -2,16 +2,15 @@
 name: intellij-platform-sdk
 description: >
   IntelliJ Platform plugin development with the v2 SDK / IntelliJ Platform Gradle Plugin 2.x.
-  Use this skill whenever the user mentions IntelliJ plugins, plugin.xml, AnAction, PSI,
-  inspections, intentions, code completion, custom language support, tool windows, settings,
-  notifications, indexing, VFS, dumb mode, plugin verifier, Marketplace publishing, or target IDEs
-  like IntelliJ IDEA, WebStorm, PyCharm, GoLand, Android Studio, Rider, or CLion.
-  Also trigger for: Gradle IntelliJ Plugin, runIde, buildPlugin, extension point, EP registration,
-  light service, @Service, persistent state, PersistentStateComponent, plugin descriptor,
-  WriteCommandAction, run configuration, file type, syntax highlighter, ParserDefinition,
-  CompletionContributor, LocalInspectionTool, ToolWindowFactory, DialogWrapper, Kotlin UI DSL,
-  dynamic plugins, coroutine scope in plugins, ActionUpdateThread, or any build.gradle.kts
-  referencing org.jetbrains.intellij.platform.
+  Use this skill when the task is clearly about building, configuring, debugging, testing, or publishing
+  a plugin for JetBrains IDEs such as IntelliJ IDEA, WebStorm, PyCharm, GoLand, Rider, CLion,
+  PhpStorm, DataGrip, or Android Studio. Trigger when the user is working in an IntelliJ Platform
+  plugin context and mentions plugin.xml, org.jetbrains.intellij.platform, AnAction, PSI,
+  LocalInspectionTool, CompletionContributor, ParserDefinition, ToolWindowFactory,
+  PersistentStateComponent, extension points, plugin verifier, Marketplace publishing,
+  custom language support, or IntelliJ Platform Gradle Plugin 2.x setup/migration.
+  Do not trigger for general JetBrains IDE usage, ordinary run configurations, generic logging,
+  generic Gradle questions, or language-server discussions outside IntelliJ plugin development.
 ---
 
 # IntelliJ Platform SDK Skill
@@ -37,29 +36,35 @@ First, identify the user’s real task. Then read only the relevant reference fi
 
 ### Read `references/getting-started.md` when the task is about
 
-- creating a new plugin
-- setting up v2 SDK / Gradle Plugin 2.x
-- choosing target IDEs
-- adding bundled plugins or optional dependencies
-- writing or fixing `plugin.xml`
+- creating a new IntelliJ Platform plugin project
+- setting up IntelliJ Platform Gradle Plugin 2.x for a plugin project
+- choosing target IDEs or bundled plugins for plugin development
+- adding optional plugin/module dependencies in `plugin.xml`
+- writing or fixing plugin-project `plugin.xml` metadata
 
 ### Read `references/platform-basics.md` when the task is about
 
 - `AnAction`, action groups, menus, toolbars
 - services (`@Service`, project/application/module services)
+- logging (`Logger`, `logger<T>()`, `thisLogger()`)
+- background tasks (`Task.Backgroundable`, `ProgressManager`, `ProgressIndicator`)
 - Virtual File System (`VirtualFile`, VFS listeners)
-- threading, read/write actions, dumb mode
+- threading, read/write actions, dumb mode, modality
 - Kotlin coroutine patterns in plugins (`readAction`, `writeAction`, `CoroutineScope`)
 - dynamic plugin loading/unloading
+- disposable lifecycle management
+- messaging infrastructure (`MessageBus`, `Topic`)
 - general plugin architecture decisions
 
 ### Read `references/psi-and-indexing.md` when the task is about
 
 - PSI traversal or modification
-- references, resolve, rename, find usages
+- references, resolve, rename, find usages, safe delete
 - code generation using PSI factories
-- file-based indexes, stub indexes, gists
+- file-based indexes, stub indexes, gists, file view providers
 - `IndexNotReadyException`, dumb mode, PSI performance
+- PSI cookbook (Java-specific common operations)
+- caching with `CachedValuesManager`
 
 ### Read `references/language-support-and-analysis.md` when the task is about
 
@@ -68,6 +73,11 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - syntax highlighting, annotators, completion
 - inspections, intentions, quick fixes
 - formatter, folding, structure view, documentation provider
+- parameter info, spell checking, navigation bar integration
+- inlay hints, code vision
+- language injection
+- Symbols API and declarations/references model
+- DocumentationTarget API
 
 ### Read `references/ui-settings-and-toolwindows.md` when the task is about
 
@@ -79,12 +89,17 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - notifications
 - popups (`JBPopup`, `ListPopup`, chooser popups)
 - project wizard, module type, project view integration
+- status bar widgets
+- editor notification banners
+- persisting sensitive data (`PasswordSafe`)
+- embedded editor components (`EditorTextField`)
 
 ### Read `references/testing-and-publishing.md` when the task is about
 
 - test fixtures and plugin tests
 - parser/completion/inspection tests
 - plugin verifier
+- `verifyPluginProjectConfiguration` / `verifyPluginStructure`
 - signing and publishing to Marketplace
 
 ### Read `references/compatibility.md` when the task is about
@@ -94,6 +109,7 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - migrating from legacy Gradle plugin 1.x to 2.x
 - API changes across platform versions
 - Java/Kotlin version expectations
+- Workspace Model migration or newer platform API transitions
 
 ### Read `references/extension_points.md` when the task is about
 
@@ -106,6 +122,14 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - finding the closest official SDK sample
 - copying an official implementation pattern
 - understanding what each JetBrains sample demonstrates
+
+### Read `references/lsp.md` when the task is about
+
+- integrating a Language Server into an IntelliJ Platform plugin
+- `LspServerSupportProvider`, `LspServerDescriptor`, or LSP-specific `plugin.xml` dependencies
+- LSP setup for supported commercial JetBrains IDEs in plugin-development context
+- LSP feature support timeline inside the IntelliJ Platform
+- deciding between LSP integration and native IntelliJ language support for a plugin
 
 ### Read `references/patterns.md` when the task is about
 
@@ -155,11 +179,11 @@ When solving IntelliJ Platform tasks:
 ## High-value reminders
 
 - `AnAction` implementations should not store request-specific state in fields.
-- Actions must implement `getActionUpdateThread()` (required since 2022.3).
-- PSI/document changes must happen inside write commands.
+- When targeting IntelliJ Platform 2022.3 or later, actions must implement `getActionUpdateThread()`.
+- PSI modifications must run on EDT inside a write action and command; coordinate document changes with the PSI/document APIs used by the platform.
 - Not every feature is safe in dumb mode; do not mark things `DumbAware` casually.
-- For Kotlin plugins on 2024.1+, prefer coroutine-based read/write APIs when appropriate.
-- Light services must be `final` and must not inject dependency services via constructors.
+- For Kotlin plugins targeting 2024.1+ or newer platform baselines, prefer coroutine-based read/write APIs when appropriate.
+- Light services must be `final`; constructor injection of dependency services is unsupported, and services should not be looked up in constructors only to cache them in fields.
 - Avoid internal APIs unless there is no viable public alternative and the tradeoff is explicit.
 
 ## Typical response strategy
@@ -183,6 +207,7 @@ When a user asks for implementation help:
 - `references/compatibility.md`
 - `references/extension_points.md`
 - `references/code_samples.md`
+- `references/lsp.md`
 - `references/patterns.md`
 - `references/troubleshooting.md`
 - `references/troubleshooting-build-runtime.md`

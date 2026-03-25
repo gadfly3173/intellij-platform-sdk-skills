@@ -16,11 +16,11 @@ Choose the lightest test type that still matches the feature.
 
 ### Common test bases
 
-- `BasePlatformTestCase` — fixture-based, generally preferred for light tests
-- `LightPlatformTestCase` — alternative for non-fixture light tests
-- `LightJavaCodeInsightFixtureTestCase` — Java-specific (JUnit 3); also available as `LightJavaCodeInsightFixtureTestCase4` (JUnit 4), `LightJavaCodeInsightFixtureTestCase5` (JUnit 5)
-- `HeavyPlatformTestCase` — full project/platform environment
-- `IdeaTestFixtureFactory` — manual fixture creation (not tied to a base class)
+- `BasePlatformTestCase` — fixture-based light tests for many PSI/editor/plugin features
+- `LightPlatformTestCase` — non-fixture light tests when you do not need `myFixture`
+- `LightJavaCodeInsightFixtureTestCase` — Java-specific code insight tests; also available as `LightJavaCodeInsightFixtureTestCase4` (JUnit 4) and `LightJavaCodeInsightFixtureTestCase5` (JUnit 5)
+- `HeavyPlatformTestCase` — heavier project/platform environment when light tests are insufficient
+- `IdeaTestFixtureFactory` — manual fixture creation when a base class is not the best fit
 
 ## When to use what
 
@@ -57,22 +57,46 @@ Choose the lightest test type that still matches the feature.
 
 ## Test-data conventions
 
-Keep stable fixtures under `src/test/testData` and prefer readable before/after files for inspections, intentions, and formatting behavior. Naming convention: `*.java` and `*.after.java` pairs for before/after comparisons. Use XML-like markup tags like `<warning descr="...">code</warning>` in test files for highlighting assertions.
+Keep stable fixtures under `src/test/testData` and prefer readable before/after files for inspections, intentions, and formatting behavior. For Java/code-insight style tests, common conventions include `*.java` and `*.after.java` pairs for before/after comparisons, plus XML-like markup tags such as `<warning descr="...">code</warning>` for highlighting assertions. Other languages or plugin types may use different fixture naming and assertion styles.
+
+Useful fixture APIs to remember:
+- `myFixture.configureByText()` / `configureByFile()`
+- `myFixture.checkResultByFile()`
+- `myFixture.testHighlighting()` / `checkHighlighting()`
+- `myFixture.complete()`
+- `myFixture.findSingleIntention()` / `launchAction()`
+- `myFixture.renameElementAtCaret()`
+- `myFixture.findUsages()`
+
+When tests need a custom SDK, libraries, or facets, use `LightProjectDescriptor` or manual fixture builders from `IdeaTestFixtureFactory`. Since 2024.2, do not forget explicit test framework dependencies in Gradle.
 
 ## Verifier and compatibility checks
 
-Always consider plugin verification when the user asks about shipping or IDE-version support.
+Include plugin verification whenever the task involves shipping, Marketplace publication, or IDE-version compatibility.
+
+### For 2.x projects
 
 ```bash
-./gradlew verifyPlugin    # 2.x Gradle Plugin
-./gradlew runPluginVerifier  # 1.x Gradle Plugin (different task name!)
+./gradlew verifyPlugin
+./gradlew verifyPluginStructure
+./gradlew verifyPluginProjectConfiguration
+```
+
+### For legacy 1.x projects
+
+```bash
+./gradlew runPluginVerifier
 ```
 
 If multiple IDE versions matter, verify against all intended targets.
 
+- Use `verifyPlugin` to run IntelliJ Plugin Verifier against target IDE builds.
+- Use `verifyPluginStructure` when the built ZIP/JAR layout or plugin metadata may be malformed.
+- Use `verifyPluginProjectConfiguration` when Gradle/plugin setup may be inconsistent (repositories, dependencies, runtime, Kotlin stdlib, JBR, etc.).
+
 ## Signing and publishing
 
-Modern plugin delivery usually involves:
+A common plugin delivery flow includes some combination of:
 
 1. build plugin
 2. sign plugin
@@ -102,19 +126,22 @@ intellijPlatform {
         password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
     }
     publishing {
-        token = providers.environmentVariable("PUBLISH_TOKEN")
-        // token is a JetBrains Marketplace Personal Access Token (from Marketplace profile > My Tokens)
+        token = providers.gradleProperty("intellijPlatformPublishingToken")
+        // or environment variable: ORG_GRADLE_PROJECT_intellijPlatformPublishingToken
+        channels = listOf("beta")
     }
 }
 ```
 
 Do not hardcode secrets into Gradle files or committed properties. Use environment variables or Gradle properties passed at build time.
 
+Common release channels include `default`, `alpha`, `beta`, `eap`, and custom channels. The first Marketplace upload is typically manual even if later releases are automated.
+
 ## Release guidance
 
 Before release, verify:
 
-- **First-time upload must be manual** — the first plugin publication to Marketplace cannot be automated
+- **First-time upload is typically manual** — the first plugin publication to Marketplace is usually not automated
 - `sinceBuild` / `untilBuild` are sensible
 - required dependencies are correct
 - optional integrations degrade gracefully

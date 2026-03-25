@@ -2,6 +2,26 @@
 
 Common extension points for IntelliJ Platform plugins.
 
+## Declaring your own extension points
+
+Use a top-level `<extensionPoints>` block when the plugin exposes extensibility to other plugins.
+
+```xml
+<extensionPoints>
+    <extensionPoint
+        name="myCustomEp"
+        interface="com.example.api.MyExtension"
+        dynamic="true"/>
+</extensionPoints>
+```
+
+Guidance:
+- use `interface` for behavioral contracts and `beanClass` for XML-configured beans
+- prefer `dynamic="true"` when unload safety is realistic
+- access the EP in code via `ExtensionPointName.create("com.example.myCustomEp")`
+- keep extension implementations stateless and lightweight; throw `ExtensionNotApplicableException` in constructors when conditional registration is needed
+- `defaultExtensionNs="com.intellij"` is for platform EPs; use your own plugin ID namespace for custom EPs
+
 ## Actions
 
 Actions are registered under a top-level `<actions>` block in `plugin.xml`, not inside `<extensions>`.
@@ -147,10 +167,20 @@ Actions are registered under a top-level `<actions>` block in `plugin.xml`, not 
         language="Simple"
         implementationClass="com.example.SimpleStructureViewFactory"/>
 
-    <!-- Documentation (obsolete — consider newer documentation API) -->
-    <lang.documentationProvider
+    <!-- Documentation (legacy compatibility path; for new 2023.1+ code prefer DocumentationTarget EPs) -->
+    <!-- <lang.documentationProvider
         language="Simple"
-        implementationClass="com.example.SimpleDocumentationProvider"/>
+        implementationClass="com.example.SimpleDocumentationProvider"/> -->
+
+    <!-- Documentation Target API (since 2023.1, recommended) -->
+    <platform.backend.documentation.targetProvider
+        implementation="com.example.SimpleDocTargetProvider"/>
+    <!-- or for PSI-based: -->
+    <platform.backend.documentation.psiTargetProvider
+        implementation="com.example.SimplePsiDocTargetProvider"/>
+    <!-- or for symbol-based: -->
+    <platform.backend.documentation.symbolTargetProvider
+        implementation="com.example.SimpleSymbolDocTargetProvider"/>
 
     <!-- Find usages -->
     <lang.findUsagesProvider
@@ -160,6 +190,104 @@ Actions are registered under a top-level `<actions>` block in `plugin.xml`, not 
     <!-- Rename -->
     <renameHandler
         implementationClass="com.example.SimpleRenameHandler"/>
+
+    <!-- Formatter -->
+    <lang.formatter
+        language="Simple"
+        implementationClass="com.example.SimpleFormattingModelBuilder"/>
+
+    <!-- External formatter (since 2021.3) -->
+    <formattingService
+        implementation="com.example.MyExternalFormattingService"/>
+
+    <!-- Spell checking -->
+    <spellchecker.support
+        language="Simple"
+        implementationClass="com.example.SimpleSpellcheckingStrategy"/>
+
+    <!-- Parameter info -->
+    <codeInsight.parameterInfo
+        language="Simple"
+        implementationClass="com.example.SimpleParameterInfoHandler"/>
+
+    <!-- Breadcrumbs / Sticky Lines -->
+    <breadcrumbsInfoProvider
+        implementation="com.example.SimpleBreadcrumbsProvider"/>
+
+    <!-- Smart Enter -->
+    <lang.smartEnterProcessor
+        language="Simple"
+        implementationClass="com.example.SimpleSmartEnterProcessor"/>
+
+    <!-- Color preview in gutter -->
+    <colorProvider
+        implementation="com.example.SimpleColorProvider"/>
+
+    <!-- Surround With -->
+    <lang.surroundDescriptor
+        language="Simple"
+        implementationClass="com.example.SimpleSurroundDescriptor"/>
+</extensions>
+```
+
+## Inlay Hints and Code Vision
+
+```xml
+<extensions defaultExtensionNs="com.intellij">
+    <!-- Declarative inlay hints (since 2023.1, recommended for inline) -->
+    <codeInsight.declarativeInlayProvider
+        language="Simple"
+        implementationClass="com.example.SimpleDeclarativeInlayProvider"
+        group="VALUES_GROUP"
+        isEnabledByDefault="true"
+        providerId="com.example.simple.inlay"/>
+
+    <!-- Declarative inlay custom settings -->
+    <codeInsight.declarativeInlayProviderCustomSettingsProvider
+        implementation="com.example.SimpleDeclarativeInlaySettingsProvider"/>
+
+    <!-- Parameter name hints (simple string-based) -->
+    <codeInsight.parameterNameHints
+        language="Simple"
+        implementationClass="com.example.SimpleParameterNameHintsProvider"/>
+
+    <!-- Optional parameter-name-hint suppression -->
+    <codeInsight.parameterNameHintsSuppressor
+        implementation="com.example.SimpleParameterHintsSuppressor"/>
+
+    <!-- Code Vision (since 2022.1, recommended for block/above-line) -->
+    <codeInsight.daemonBoundCodeVisionProvider
+        implementation="com.example.SimpleCodeVisionProvider"/>
+
+    <!-- Code Vision settings entry -->
+    <config.codeVisionGroupSettingProvider
+        implementation="com.example.SimpleCodeVisionGroupSettingProvider"/>
+</extensions>
+```
+
+## Language Injection
+
+```xml
+<extensions defaultExtensionNs="com.intellij">
+    <languageInjectionContributor
+        implementation="com.example.SimpleLanguageInjectionContributor"
+        language="Simple"/>
+
+    <languageInjectionPerformer
+        implementation="com.example.SimpleLanguageInjectionPerformer"/>
+
+    <multiHostInjector
+        implementation="com.example.SimpleMultiHostInjector"/>
+</extensions>
+```
+
+## LSP
+
+```xml
+<extensions defaultExtensionNs="com.intellij">
+    <!-- LSP server support is only available for supported IntelliJ Platform versions / IDE products; see lsp.md for product and 2025.2.1 dependency boundaries -->
+    <platform.lsp.serverSupportProvider
+        implementation="com.example.MyLspServerSupportProvider"/>
 </extensions>
 ```
 
@@ -192,6 +320,15 @@ Actions are registered under a top-level `<actions>` block in `plugin.xml`, not 
     <notificationGroup
         id="MyPlugin.Notification"
         displayType="BALLOON"/>
+
+    <!-- Status bar widget -->
+    <statusBarWidgetFactory
+        id="com.example.MyWidget"
+        implementation="com.example.MyWidgetFactory"/>
+
+    <!-- Editor notification banner -->
+    <editorNotificationProvider
+        implementation="com.example.MyEditorNotificationProvider"/>
 </extensions>
 ```
 

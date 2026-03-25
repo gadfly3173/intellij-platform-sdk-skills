@@ -24,6 +24,14 @@ Use this file as a routing guide instead of loading every troubleshooting note a
 
 ## Quick heuristics
 
-- build starts failing before IDE launch → build/runtime troubleshooting
-- plugin loads but behavior fails at PSI/editor/UI time → PSI/UI/testing troubleshooting
-- release or compatibility warning → build/runtime troubleshooting first
+- if the build fails before IDE launch, start with build/runtime troubleshooting
+- if the plugin loads but behavior fails at PSI/editor/UI time, start with PSI/UI/testing troubleshooting
+- if release or compatibility warnings appear, start with build/runtime troubleshooting, then cross-check `compatibility.md`
+- if the LSP server does not start or communication looks wrong, read the `lsp.md` troubleshooting section directly
+
+## Symptom-based routing
+
+- repository resolution fails, Gradle sync breaks, or signing/verifier tasks fail → `troubleshooting-build-runtime.md`
+- `plugin.xml` wiring, class loading, action registration, or service initialization fails → `troubleshooting-build-runtime.md`
+- `IndexNotReadyException`, PSI invalidation, write-action errors, or EDT assertions → `troubleshooting-psi-ui-testing.md`
+- editor/document state looks wrong, UI does not refresh, or tests/debugging in sandbox IDE are failing → `troubleshooting-psi-ui-testing.md`

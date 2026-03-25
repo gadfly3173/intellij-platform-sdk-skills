@@ -8,6 +8,8 @@ IntelliJ Platform uses the following versioning scheme:
 
 | Version | Build Number | Format |
 |---------|--------------|--------|
+| 2025.3 | 253.xxxx.xx | BRANCH.BUILD |
+| 2025.2 | 252.xxxx.xx | BRANCH.BUILD |
 | 2025.1 | 251.xxxx.xx | BRANCH.BUILD |
 | 2024.3 | 243.xxxx.xx | BRANCH.BUILD |
 | 2024.2 | 242.xxxx.xx | BRANCH.BUILD |
@@ -22,8 +24,8 @@ Build number format: `YYR` where:
 
 | IntelliJ Platform Gradle Plugin | Minimum Gradle | Minimum Platform | Notes |
 |--------------------------------|----------------|------------------|-------|
-| 2.x (current: 2.13.1) | 8.13 | 2022.3 | Current |
-| 1.x (legacy) | 7.3 | — | Legacy, use 2.x for new projects |
+| 2.x (example current line: 2.13.1) | 8.13 | 2022.3 | Use 2.x for new projects; verify the exact plugin version in the official docs before pinning |
+| 1.x (legacy) | 7.3 | — | Legacy only |
 
 ## SDK Migration (1.x to 2.x)
 
@@ -75,7 +77,6 @@ intellijPlatform {
     pluginConfiguration {
         ideaVersion {
             sinceBuild = "243"
-            untilBuild = "243.*"
         }
     }
 }
@@ -91,6 +92,7 @@ intellijPlatform {
 | Patching | `patchPluginXml` | `pluginConfiguration` |
 | Repositories | Automatic | Explicit `intellijPlatform { defaultRepositories() }` |
 | Verifier task | `runPluginVerifier` | `verifyPlugin` |
+| instrumentationTools | Required | Deprecated / auto-applied |
 
 ### Migration Helper
 
@@ -102,11 +104,16 @@ A migration plugin `org.jetbrains.intellij.platform.migration` is available to h
 
 ```xml
 <!-- plugin.xml -->
-<idea-version since-build="243" until-build="243.*"/>
+<idea-version since-build="243"/>
+<!-- since-build is required -->
+<!-- usually omit until-build for broad compatibility -->
+<!-- when you intentionally ship separate plugin versions per major IDE line, 2025.3+ introduces strict-until-build -->
 ```
 
 | Version | Build | Since |
 |---------|-------|-------|
+| 2025.3 | 253.xxx | 253 |
+| 2025.2 | 252.xxx | 252 |
 | 2025.1 | 251.xxx | 251 |
 | 2024.3 | 243.xxx | 243 |
 | 2024.2 | 242.xxx | 242 |
@@ -117,49 +124,62 @@ A migration plugin `org.jetbrains.intellij.platform.migration` is available to h
 
 ### Notable API Changes
 
+Use the labels below literally:
+- **Breaking API** — code/config changes are required for affected plugins
+- **Notable change** — behavior or capabilities changed, but not always as a hard break
+- **Migration note** — recommended transition guidance or tooling support
+
+#### 2025.2
+- Notable change: `LspCustomization` API becomes the customization path for newly introduced LSP features in 2025.2+
+- Notable change: LSP inlay hints and folding range support arrive in 2025.2.2
+- Migration note: the `plugin.xml` LSP dependency changes to `com.intellij.modules.lsp` in 2025.2.1 and later (earlier versions use `com.intellij.modules.ultimate`)
+
 #### 2025.1
-- Notable: `ContainerUtil` methods marked `@Unmodifiable` now return truly unmodifiable collections (internal/test mode for now)
-- Notable: Kotlin 2.x required for plugin compilation
-- Notable: K2 Kotlin mode enabled by default in IntelliJ IDEA
+- Notable change: `ContainerUtil` methods marked `@Unmodifiable` now return truly unmodifiable collections (internal/test mode for now)
+- Breaking API: Kotlin 2.x required for plugin compilation
+- Notable change: K2 Kotlin mode enabled by default in IntelliJ IDEA
+- Breaking API: Kotlin UI DSL v1 (`com.intellij.ui.layout` package) must not be used from 2025.1 — migrate to v2 (`com.intellij.ui.dsl.builder`)
 
 #### 2024.3
-- Breaking: JSON plugin extracted — add `<depends>com.intellij.modules.json</depends>` and `bundledModule("com.intellij.modules.json")` in Gradle
-- Breaking: JUnit library unbundled — add explicit test dependency
-- Notable: `ParsingTestCase` now verifies reparsing causes no changes
-- Notable: Dumb-aware "Highlight Usages" support
+- Breaking API: JSON plugin extracted — add `<depends>com.intellij.modules.json</depends>` and `bundledModule("com.intellij.modules.json")` in Gradle when your plugin relies on JSON support
+- Breaking API: JUnit library unbundled — add explicit test dependency when your tests rely on it
+- Notable change: `ParsingTestCase` now verifies reparsing causes no changes
+- Notable change: Dumb-aware "Highlight Usages" support
 
 #### 2024.2
-- Notable: Intention actions and quick-fixes can be `DumbAware`
-- Notable: Workspace Model API replaces project model
-- Breaking: `TabInfo` constructor requires non-null `JComponent`
-- Notable: `ToggleAction` no longer closes popups
+- Notable change: Intention actions and quick-fixes can be `DumbAware`
+- Migration note: Workspace Model APIs are increasingly favored over older project-model integrations in some areas
+- Breaking API: `TabInfo` constructor requires non-null `JComponent`
+- Notable change: `ToggleAction` no longer closes popups
 
 #### 2024.1
-- Notable: Bundled localization capabilities for plugins
-- Notable: Kotlin coroutines recommended for asynchronous code
-- Notable: Highlighting runs more efficiently (inspections and annotators in parallel)
-- Notable: Cached values interact with dumb mode
+- Notable change: Bundled localization capabilities for plugins
+- Migration note: Kotlin coroutines are recommended for asynchronous code
+- Notable change: Highlighting runs more efficiently (inspections and annotators in parallel)
+- Notable change: Cached values interact with dumb mode
 
 #### 2023.3
-- Breaking: Threading model enforcement tightened
-- Breaking: `commons-lang2` and `commons-collections` libraries removed from platform
-- Breaking: JsonPath library unbundled
-- Notable: External annotators can run in dumb mode
+- Breaking API: Threading model enforcement tightened
+- Breaking API: `commons-lang2` and `commons-collections` libraries removed from platform
+- Breaking API: JsonPath library unbundled
+- Notable change: External annotators can run in dumb mode
 
 #### 2023.2
-- Notable: Language Server Protocol (LSP) API introduced
-- Notable: Inspection descriptions support syntax-highlighted code snippets
+- Notable change: Language Server Protocol (LSP) API introduced
+- Notable change: Inspection descriptions support syntax-highlighted code snippets
 
 #### 2023.1
-- Notable: Declarative inspection options
-- Notable: `DocumentationTarget` API for quick documentation (replaces `lang.documentationProvider`)
-- Notable: `@ApiStatus.Obsolete` annotation introduced
-- Notable: Annotators can implement `DumbAware` (run during indexing)
+- Notable change: Declarative inspection options
+- Notable change: `DocumentationTarget` API for quick documentation (replaces `lang.documentationProvider`)
+- Notable change: `@ApiStatus.Obsolete` annotation introduced
+- Notable change: Annotators can implement `DumbAware` (run during indexing)
 
 ## Language Level Compatibility
 
 | IntelliJ Platform | Java | Bundled Kotlin stdlib |
 |-------------------|------|-----------------------|
+| 2025.3 | 21 | 2.2.20 |
+| 2025.2 | 21 | 2.1.20 |
 | 2025.1 | 21 | 2.1.10 |
 | 2024.3 | 21 | 2.0.21 |
 | 2024.2 | 21 | 1.9.24 |
@@ -176,8 +196,8 @@ Kotlin 2.x is recommended for plugins targeting 2024.3+ and **required** for 202
 
 | IDE | Gradle Dependency | Notes |
 |-----|-------------------|-------|
-| IntelliJ IDEA | `intellijIdea()` | Community + Ultimate |
-| PyCharm | `pycharm()` | Community + Professional |
+| IntelliJ IDEA | `intellijIdea()` | IntelliJ IDEA target; 2025.3+ uses the unified product helper instead of deprecated `IC` |
+| PyCharm | `pycharm()` | PyCharm target; product-line details vary by platform version and 2025.3+ uses the unified helper instead of deprecated `PC` |
 | WebStorm | `webstorm()` | JavaScript IDE |
 | PhpStorm | `phpstorm()` | PHP IDE |
 | GoLand | `goland()` | Go IDE |
@@ -187,6 +207,8 @@ Kotlin 2.x is recommended for plugins targeting 2024.3+ and **required** for 202
 | RubyMine | `rubymine()` | Ruby IDE |
 | RustRover | `rustRover()` | Rust IDE |
 | Android Studio | `androidStudio()` | Android IDE |
+
+**2025.3+ type changes:** `IntellijIdeaCommunity` (`IC`) and `PyCharmCommunity` (`PC`) are deprecated as dependency targets for 2025.3+. Use `intellijIdea()` and `pycharm()` for the unified product targets instead.
 
 ### Dependency Declaration
 
@@ -223,7 +245,7 @@ dependencies {
 ## Breaking Changes Log
 
 ### 2022.3
-- Notable: `ActionUpdateThread` — `getActionUpdateThread()` required in all actions
+- Notable: `ActionUpdateThread` — `getActionUpdateThread()` is required when targeting 2022.3 or later
 - Threading model enforcement begins
 
 ## Migration Checklist
@@ -242,7 +264,8 @@ dependencies {
 
 ### General Version Updates
 
-- [ ] Update `since-build` and `until-build`
+- [ ] Update `since-build`
+- [ ] Only add `until-build` / `strict-until-build` when the release strategy actually requires an upper bound
 - [ ] Check deprecated API usage
 - [ ] Update Kotlin/Java language level if needed
 - [ ] Run plugin verifier
@@ -259,8 +282,9 @@ intellijPlatform {
         ides {
             recommended()
             // or specific versions:
-            // ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.2")
-            // ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.3")
+            // create(IntelliJPlatformType.IntellijIdeaCommunity, "2024.2")
+            // Note: ide() was renamed to create() in Gradle Plugin 2.7.0+
+            // create(IntelliJPlatformType.IntellijIdeaCommunity, "2024.3")
         }
     }
 }

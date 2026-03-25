@@ -6,7 +6,7 @@ Use this reference when the problem is about Gradle setup, dependency resolution
 
 ### `Could not resolve org.jetbrains.intellij.platform`
 
-Usually means the plugin repositories are incomplete.
+A common cause is incomplete plugin repositories.
 
 ```kotlin
 repositories {
@@ -19,17 +19,22 @@ repositories {
 
 ### `Plugin [id: 'org.jetbrains.intellij.platform'] was not found`
 
-Check:
+Common checks:
 
-- plugin version exists
-- plugin management/settings are correct
+- the plugin version exists and is spelled correctly
+- Gradle plugin resolution / plugin management is configured correctly
 - Gradle version is high enough for the selected plugin version
+- the project is resolving plugins from the expected plugin repositories
+
+If the project uses `dependencyResolutionManagement` and you want to declare IntelliJ Platform repositories in `settings.gradle.kts`, the separate settings plugin can be part of that setup:
 
 ```kotlin
 plugins {
-    id("org.jetbrains.intellij.platform.settings") version "2.13.1"
+    id("org.jetbrains.intellij.platform.settings") version "2.13.1" // example version
 }
 ```
+
+That settings plugin is not a universal fix for every `org.jetbrains.intellij.platform` resolution failure; use it only when the build layout actually needs settings-level repository configuration.
 
 ### Bundled plugin not found
 
@@ -48,7 +53,7 @@ dependencies {
 
 ### `ClassNotFoundException`
 
-Check:
+Common causes to check:
 
 1. class/package name in `plugin.xml`
 2. source-set placement
@@ -88,7 +93,7 @@ Check:
 
 ### Action not visible
 
-Check:
+Common checks:
 
 1. `plugin.xml` registration is correct
 2. target action group exists
@@ -102,6 +107,13 @@ public void update(@NotNull AnActionEvent e) {
 ```
 
 ### Missing `getActionUpdateThread()` warning
+
+When targeting IntelliJ Platform 2022.3 or later, actions must implement `getActionUpdateThread()`. Choose the thread based on what `update()` reads:
+
+- `BGT` for PSI/VFS/project-model reads
+- `EDT` for direct Swing/UI state access
+
+A common modern choice is:
 
 ```java
 @Override
@@ -148,15 +160,19 @@ Before publishing, verify:
 
 ### `Cannot create class`
 
-Usually a constructor/signature/classloading problem.
+One common cause is a constructor, signature, dependency, or classloading problem. Also check whether the class is abstract, has the wrong constructor shape for the extension point/service, or depends on an unavailable module/plugin at runtime.
 
 ### `Extension implementation class not found`
 
-Usually a wrong fully qualified class name or unavailable dependency.
+Common causes include a wrong fully qualified class name or an unavailable dependency.
+
+### IDE dependency type deprecated (2025.3+)
+
+If using `IntellijIdeaCommunity` (`IC`) or `PyCharmCommunity` (`PC`) as dependency target for 2025.3+, switch to the unified `intellijIdea()` / `pycharm()` helpers.
 
 ### `Service configuration is missing`
 
-Register the service in `plugin.xml` if not using a light service pattern.
+If the service is not a light service, check whether it needs to be declared in `plugin.xml`. If it is intended to be a light service, verify `@Service`, the service level, and constructor shape instead of adding XML blindly.
 
 ## See also
 
@@ -164,3 +180,4 @@ Register the service in `plugin.xml` if not using a light service pattern.
 - `compatibility.md`
 - `extension_points.md`
 - `testing-and-publishing.md`
+- `lsp.md`

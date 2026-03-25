@@ -29,7 +29,7 @@ Use this reference when the user works on general plugin architecture, actions, 
 
 1. Override `actionPerformed()`
 2. Override `update()` for visibility/enabled state
-3. Override `getActionUpdateThread()` (required since 2022.3)
+3. When targeting 2022.3 or later, override `getActionUpdateThread()`
 4. Keep `update()` extremely fast
 
 ### Important rule: no fields in `AnAction`
@@ -63,6 +63,20 @@ public class HelloWorldAction extends AnAction {
 - Use `BGT` when `update()` needs PSI, VFS, or project-model reads
 - Use `EDT` when `update()` needs Swing/UI state directly
 - Prefer `BGT` for most modern actions
+
+### Action data context
+
+Access contextual data via `AnActionEvent`:
+
+- `e.getData(CommonDataKeys.PROJECT)` — current project
+- `e.getData(CommonDataKeys.EDITOR)` — current editor
+- `e.getData(CommonDataKeys.PSI_FILE)` — current PSI file
+- `e.getData(CommonDataKeys.VIRTUAL_FILE)` — current virtual file
+- `e.getData(PlatformDataKeys.SELECTED_ITEM)` — selected item
+- `e.getData(CommonDataKeys.NAVIGATABLE_ARRAY)` — selected navigatables
+
+BGT update: has read access to PSI/VFS/project models, NO Swing access.
+EDT update: has Swing access. PSI/VFS access is technically possible but discouraged — it causes UI freezes and the platform is progressively restricting it.
 
 ## Services
 
@@ -99,6 +113,10 @@ public final class MyProjectService {
 - Avoid eager heavy initialization in constructors
 - Do not use old `ServiceManager` APIs in new code
 - Put reusable logic in services instead of static helpers inside actions
+- Do not cache service instances in `AnAction` fields or in static global state
+- In other components, whether to cache a service depends on using the correct lifecycle/scope
+- Cyclic service initialization throws `PluginException` — break cycles by deferring retrieval
+- Service retrieval does not need a read action and can be called from any thread
 
 ## Virtual File System
 
@@ -128,9 +146,88 @@ Use `BulkFileListener` subscribed to `VirtualFileManager.VFS_CHANGES` for effici
 
 `Disposable` is the platform's resource cleanup mechanism. `Disposer.register(parent, child)` creates a parent-child tree — when the parent is disposed, all children are disposed automatically.
 
-- Never use `Application` or `Project` directly as parent disposable in plugin code — use a plugin service instead
-- Use `Disposer.dispose(disposable)` for explicit cleanup
-- Services that implement `Disposable` are disposed when their scope ends (app shutdown or project close)
+### Rules
+
+- **Never use `Application` or `Project` directly as parent disposable** in plugin code — causes classloader leaks on plugin unload. Use a project/application-level service instead.
+- **Default to `Disposer.dispose(disposable)` instead of calling `Disposable.dispose()` directly** — this keeps disposer-tree semantics explicit and consistent.
+- Services that implement `Disposable` are disposed when their scope ends (app shutdown or project close).
+- Do not assume objects registered via `plugin.xml` automatically participate in the `Disposer` tree — explicitly manage the lifecycle of listeners, connections, and UI resources you create.
+- Children are always disposed before their parents.
+- Use `Disposer.newDisposable()` for manual lifecycle management when no natural parent exists.
+
+### Choosing a parent disposable
+
+- **Plugin lifetime** — use a project or application service
+- **Dialog lifetime** — use `DialogWrapper.getDisposable()`
+- **Tool window content** — use `Content.setDisposer()`
+- **Message bus connections** — always pass parent disposable to `MessageBus.connect(disposable)`
+
+## Messaging infrastructure
+
+The messaging system provides a publisher/subscriber mechanism for loosely coupled communication between components.
+
+### Core concepts
+
+- `Topic<L>` — a named channel with a listener interface `L`
+- `MessageBus` — obtained from `Application` or `Project`
+- `MessageBusConnection` — a subscriber connection; always pass a parent `Disposable`
+
+### Subscribing to events
+
+```java
+project.getMessageBus()
+    .connect(disposable)
+    .subscribe(VirtualFileManager.VFS_CHANGES, new BulkFileListener() {
+        @Override
+        public void after(@NotNull List<? extends VFileEvent> events) {
+            // handle events
+        }
+    });
+```
+
+### Publishing events
+
+```java
+MyListener publisher = project.getMessageBus()
+    .syncPublisher(MY_TOPIC);
+publisher.onEvent(data);
+```
+
+### Guidance
+
+- Prefer declarative listener registration in `plugin.xml` (`<applicationListeners>`, `<projectListeners>`) for performance (lazy creation)
+- Listeners must be **stateless** and must **NOT** implement `Disposable`
+- Project-level listeners can accept `Project` in their constructor
+- Always use disposable-based connections for cleanup
+
+## Logging
+
+Use the platform `Logger` abstraction rather than direct log4j usage.
+
+### Common patterns
+
+```java
+private static final Logger LOG = Logger.getInstance(MyClass.class);
+```
+
+```kotlin
+private val LOG = logger<MyClass>()
+```
+
+```kotlin
+try {
+    doWork()
+}
+catch (e: Exception) {
+    thisLogger().error("Work failed", e)
+}
+```
+
+### Guidance
+
+- Use a dedicated class-scoped logger for normal logging: `Logger.getInstance(MyClass.class)` in Java or `logger<MyClass>()` in Kotlin
+- Use `thisLogger()` mainly as a convenience for exception reporting, typically inside `catch` blocks
+- Guard expensive debug/trace message construction when needed
 
 ## Threading model
 
@@ -141,7 +238,7 @@ The platform uses a three-tier lock system: Read Lock, Write Intent Lock, and Wr
 - Read PSI/VFS/project model under read access
 - Modify PSI/documents under write access (always on EDT)
 - UI changes belong on EDT
-- Write Intent Lock is implicitly acquired on EDT, allowing read access without explicit lock
+- EDT currently implies Write Intent Lock, but that should not be treated as a blanket recommendation to perform arbitrary PSI/VFS/project-model reads on EDT; keep such reads short and move substantial work off the UI thread
 
 ### Read/write examples
 
@@ -167,6 +264,66 @@ Use `WriteCommandAction` for PSI/document modifications that need undo support. 
 ### Non-blocking reads
 
 Use `ReadAction.nonBlocking()` for read operations that may take noticeable time. The action gets canceled automatically when a write action arrives, then restarts. For plugins targeting 2024.1+, prefer the coroutine-based `readAction` (WARA) API instead.
+
+### Background processes / Progress API
+
+Use background tasks for work that may take noticeable time or needs cancellation/progress reporting.
+
+```java
+new Task.Backgroundable(project, "Processing Files", true) {
+    @Override
+    public void run(@NotNull ProgressIndicator indicator) {
+        indicator.setIndeterminate(false);
+
+        for (int i = 0; i < total; i++) {
+            ProgressManager.checkCanceled();
+            indicator.setFraction((double)i / total);
+            indicator.setText("Processing " + (i + 1) + " / " + total);
+
+            // background work
+        }
+    }
+}.queue();
+```
+
+- `Task.Backgroundable` is the standard Java pattern for cancellable background work with progress
+- `ProgressIndicator` exposes cancellation and progress updates via `setText()`, `setText2()`, `setFraction()`, and `setIndeterminate()`
+- Call `ProgressManager.checkCanceled()` regularly in loops and deeper processing
+- If `ProcessCanceledException` is caught, rethrow it — do not log or swallow it
+- For Kotlin plugins targeting 2024.1+, prefer coroutine-based progress helpers such as `withBackgroundProgress` when appropriate
+
+### ModalityState basics for `invokeLater`
+
+Use `ApplicationManager.getApplication().invokeLater()` instead of `SwingUtilities.invokeLater()` when the runnable may interact with IDE models or lead to write work on EDT.
+
+```java
+ApplicationManager.getApplication().invokeLater(
+    () -> updateUiOrScheduleWrite(project),
+    ModalityState.defaultModalityState()
+);
+```
+
+- `defaultModalityState()` is the usual default
+- `nonModal()` waits until modal dialogs close
+- `current()` ties execution to the current dialog stack
+- `any()` ignores modal dialogs and is only safe for pure UI work — never for PSI/VFS/project-model changes
+
+### Slow operations on EDT
+
+Keep EDT work short. Do not perform VFS traversal, PSI resolve, reference search, or index-heavy work directly on EDT.
+
+- `SlowOperations.assertSlowOperationsAreAllowed()` reports code paths that should be moved off EDT
+- Treat these assertions as real problems even if they currently appear only in internal, dev, or EAP builds
+- Move the slow part to a background task, pooled thread, or coroutine, then switch back to EDT only for UI updates
+
+### Object validity between read actions
+
+Objects read in one read action are not guaranteed to remain valid across later read actions.
+
+- Re-check `isValid()` when entering a new read action
+- Re-resolve PSI from stable handles such as `VirtualFile` instead of caching raw PSI across async boundaries
+- Use `SmartPsiElementPointer` when a PSI element must survive document changes or background/EDT handoffs
+- Keep read actions short and derive fresh objects inside the read action that uses them
 
 ### Kotlin coroutines
 
