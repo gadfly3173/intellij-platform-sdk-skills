@@ -187,7 +187,7 @@ Actions are registered under a top-level `<actions>` block in `plugin.xml`, not 
         language="Simple"
         implementationClass="com.example.SimpleFindUsagesProvider"/>
 
-    <!-- Rename -->
+    <!-- Custom rename flow only; default PSI/reference-based rename usually does not need this EP -->
     <renameHandler
         implementationClass="com.example.SimpleRenameHandler"/>
 
@@ -290,6 +290,25 @@ Actions are registered under a top-level `<actions>` block in `plugin.xml`, not 
         implementation="com.example.MyLspServerSupportProvider"/>
 </extensions>
 ```
+
+## MCP
+
+```xml
+<extensions defaultExtensionNs="com.intellij">
+    <!-- MCP support is product- and build-specific; verify the target IDE actually exposes these EPs -->
+    <mcpServer.mcpToolsProvider
+        implementation="com.example.MyMcpToolsProvider"/>
+
+    <mcpServer.mcpToolset
+        implementation="com.example.MyMcpToolset"/>
+</extensions>
+```
+
+Guidance:
+- Use these EPs only after confirming the target IDE/product line actually exposes the MCP surface you need.
+- Keep implementations stateless and lightweight; put real tool logic in services.
+- Treat MCP registration as version-scoped rather than universally available.
+- Read `mcp-and-ai-integration.md` for scope and contract-boundary guidance.
 
 ## UI Components
 

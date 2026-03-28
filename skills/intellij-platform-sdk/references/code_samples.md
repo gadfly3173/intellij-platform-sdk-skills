@@ -233,6 +233,71 @@ Custom tree structure provider.
 - Project view tree
 - Node decorators
 
+## Priority sample choices by task
+
+Use the sample list selectively instead of reading everything.
+
+### For inspection options and inspection workflows
+
+Prefer these samples first:
+
+- `comparing_string_references_inspection` — best starting point for local inspections, quick fixes, and PSI-based inspection flow
+- `code_inspection_qodana` — useful when the task involves inspection packaging, Kotlin-based inspection projects, or Qodana-oriented execution
+- `simple_language_plugin` — useful when inspections live inside a broader custom-language implementation
+
+### For rename refactoring and language-aware references
+
+Prefer these samples first:
+
+- `simple_language_plugin` — best starting point for references, find usages, and rename behavior in a custom language plugin
+- `psi_demo` — useful when rename support depends on PSI construction or modification patterns rather than a full language stack
+
+### For new project wizard and project creation flows
+
+Prefer these samples first:
+
+- `project_wizard` — first place to look for wizard steps and project/module creation flow structure
+- `framework_basics` — useful when the wizard is tied to framework support or framework-oriented setup
+- `module` — only when the task is really about legacy module-type or module-builder flows rather than the modern New Project Wizard APIs
+
+### For tool windows and adjacent UI surfaces
+
+Prefer these samples first:
+
+- `tool_window` — primary sample for tool window content and factory structure
+- `settings` — useful when the feature spans tool window plus persisted settings/configurable UI
+- `project_view_pane` or `tree_structure_provider` — useful for project-view-side integrations rather than tool windows
+
+### For MCP-related work
+
+There is no dedicated official MCP sample in the current SDK sample set.
+
+Prefer these as pattern sources instead:
+
+- `action_basics` — for command/action entry patterns
+- `tool_window` — for user-facing surfaces around MCP-backed features
+- `settings` — for MCP-related configuration UI and persisted settings
+- `project_model` or `psi_demo` — when MCP tools operate on project structure or PSI-backed code actions
+
+For MCP itself, treat `mcp-and-ai-integration.md` and `extension_points.md` as the authoritative starting point, then inspect platform sources if contract details are missing.
+
+### For cross-cutting language-support work
+
+If the user asks for a bundle of language features rather than one isolated API, start with:
+
+- `simple_language_plugin` — best broad sample for parser/highlighting/completion/references/rename/formatter/folding
+- `conditional_operator_intention` — focused intention pattern
+- `comparing_string_references_inspection` — focused inspection pattern
+- `live_templates` — if template authoring is part of the request
+
+### Sample selection heuristics
+
+- prefer the narrowest sample that demonstrates the target feature directly
+- use `simple_language_plugin` when the user needs an end-to-end language example rather than an isolated API
+- prefer `project_wizard` over `module` for modern project-creation tasks
+- prefer `settings` plus `tool_window` together when the feature has both UI and persisted configuration
+- for topics without an official sample (such as MCP), use the closest platform-pattern sample and then verify the real API from source or official EP lists
+
 ## Sample Structure
 
 Each sample follows this structure:

@@ -273,9 +273,7 @@ new Task.Backgroundable(
         indicator.setIndeterminate(false);
 
         for (int i = 0; i < total; i++) {
-            if (indicator.isCanceled()) {
-                break;
-            }
+            ProgressManager.checkCanceled(); // throws ProcessCanceledException if canceled
 
             indicator.setFraction((double) i / total);
             indicator.setText("Processing item " + i + " of " + total);

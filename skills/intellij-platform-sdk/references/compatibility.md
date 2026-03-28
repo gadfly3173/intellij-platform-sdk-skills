@@ -8,6 +8,7 @@ IntelliJ Platform uses the following versioning scheme:
 
 | Version | Build Number | Format |
 |---------|--------------|--------|
+| 2026.1 | 261.xxxx.xx | BRANCH.BUILD |
 | 2025.3 | 253.xxxx.xx | BRANCH.BUILD |
 | 2025.2 | 252.xxxx.xx | BRANCH.BUILD |
 | 2025.1 | 251.xxxx.xx | BRANCH.BUILD |
@@ -110,8 +111,21 @@ A migration plugin `org.jetbrains.intellij.platform.migration` is available to h
 <!-- when you intentionally ship separate plugin versions per major IDE line, 2025.3+ introduces strict-until-build -->
 ```
 
+Use actual build numbers only. Do not invent branch or patch numbers. Multipart build numbers are valid when you need to target a specific bugfix baseline:
+
+```xml
+<!-- any 2021.3.x release -->
+<idea-version since-build="213" until-build="213.*"/>
+
+<!-- 2021.3.3 or later -->
+<idea-version since-build="213.7172.25"/>
+```
+
+`since-build="233.*"` is invalid, and broad upper bounds should normally be left to Marketplace policy unless your release process truly ships one plugin version per IDE major line.
+
 | Version | Build | Since |
 |---------|-------|-------|
+| 2026.1 | 261.xxx | 261 |
 | 2025.3 | 253.xxx | 253 |
 | 2025.2 | 252.xxx | 252 |
 | 2025.1 | 251.xxx | 251 |
@@ -178,6 +192,7 @@ Use the labels below literally:
 
 | IntelliJ Platform | Java | Bundled Kotlin stdlib |
 |-------------------|------|-----------------------|
+| 2026.1 | 21 | 2.3.20 |
 | 2025.3 | 21 | 2.2.20 |
 | 2025.2 | 21 | 2.1.20 |
 | 2025.1 | 21 | 2.1.10 |

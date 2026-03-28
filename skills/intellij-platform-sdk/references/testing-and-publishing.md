@@ -31,15 +31,41 @@ Use IntelliJ Platform Starter/Driver when the test must boot a fuller IDE enviro
 - **Driver** — provides higher-level UI interaction and automation support
 - **JUnit 5 only** — the Starter-based integration/UI testing path is built for JUnit 5, not JUnit 4
 
-For IntelliJ Platform Gradle Plugin 2.x projects, add the Starter test framework dependency when the task is specifically about integration or UI testing:
+A typical Gradle setup also creates a dedicated `integrationTest` source set and configuration, not just the Starter dependency:
 
 ```kotlin
+sourceSets {
+    create("integrationTest") {
+        compileClasspath += sourceSets.main.get().output
+        runtimeClasspath += sourceSets.main.get().output
+    }
+}
+
+val integrationTestImplementation by configurations.getting {
+    extendsFrom(configurations.testImplementation.get())
+}
+
 dependencies {
     intellijPlatform {
         testFramework(TestFrameworkType.Starter, configurationName = "integrationTestImplementation")
     }
+
+    integrationTestImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
+    integrationTestImplementation("org.kodein.di:kodein-di-jvm:7.20.2")
+    integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.10.1")
+}
+
+val integrationTest by intellijPlatformTesting.testIdeUi.registering {
+    task {
+        val integrationTestSourceSet = sourceSets.getByName("integrationTest")
+        testClassesDirs = integrationTestSourceSet.output.classesDirs
+        classpath = integrationTestSourceSet.runtimeClasspath
+        useJUnitPlatform()
+    }
 }
 ```
+
+Current official Starter intro examples explicitly add `org.kodein.di:kodein-di-jvm` and `org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm` alongside `testFramework(TestFrameworkType.Starter)`. Treat those as part of the documented Starter setup pattern unless the official example for your target platform line says otherwise.
 
 Prefer fixture-based tests for PSI, parser, completion, inspection, and other focused code-insight behavior. Move to Starter/Driver when fidelity matters more than speed.
 
@@ -90,7 +116,7 @@ Useful fixture APIs to remember:
 - `myFixture.renameElementAtCaret()`
 - `myFixture.findUsages()`
 
-When tests need a custom SDK, libraries, or facets, use `LightProjectDescriptor` or manual fixture builders from `IdeaTestFixtureFactory`. Since 2024.2, do not forget explicit test framework dependencies in Gradle.
+When tests need a custom SDK, libraries, or facets, use `LightProjectDescriptor` or manual fixture builders from `IdeaTestFixtureFactory`. For JVM-language tests, `DefaultLightProjectDescriptor` and helpers such as `withRepositoryLibrary()` can reduce custom setup boilerplate. Since 2024.2, do not forget explicit test framework dependencies in Gradle.
 
 ## Verifier and compatibility checks
 

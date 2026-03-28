@@ -72,12 +72,15 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - lexer, parser, `ParserDefinition`
 - syntax highlighting, annotators, completion
 - inspections, intentions, quick fixes
+- rename refactoring, rename validation, safe delete
 - formatter, folding, structure view, documentation provider
 - parameter info, spell checking, navigation bar integration
 - inlay hints, code vision
 - language injection
 - Symbols API and declarations/references model
+- Poly Symbols and Web Types for web-framework metadata
 - DocumentationTarget API
+- `OptPane`, declarative inspection options, `OptionController`
 
 ### Read `references/ui-settings-and-toolwindows.md` when the task is about
 
@@ -88,7 +91,7 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - persistent state
 - notifications
 - popups (`JBPopup`, `ListPopup`, chooser popups)
-- project wizard, module type, project view integration
+- new project wizard, module type, project view integration
 - status bar widgets
 - editor notification banners
 - persisting sensitive data (`PasswordSafe`)
@@ -118,6 +121,7 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - exact `plugin.xml` registration syntax
 - locating the right extension point
 - action group IDs and XML patterns
+- MCP extension points such as `com.intellij.mcpServer.*`
 
 ### Read `references/code_samples.md` when the task is about
 
@@ -132,6 +136,13 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - LSP setup for supported JetBrains IDE products and platform versions in plugin-development context
 - LSP feature support timeline inside the IntelliJ Platform
 - deciding between LSP integration and native IntelliJ language support for a plugin
+
+### Read `references/mcp-and-ai-integration.md` when the task is about
+
+- MCP-related plugin integration in an IntelliJ Platform plugin
+- contributing MCP tools or defining MCP toolsets
+- understanding MCP-related extension points such as `com.intellij.mcpServer.*`
+- MCP guidance in areas where the official SDK docs are still sparse
 
 ### Read `references/patterns.md` when the task is about
 
@@ -210,6 +221,7 @@ When a user asks for implementation help:
 - `references/extension_points.md`
 - `references/code_samples.md`
 - `references/lsp.md`
+- `references/mcp-and-ai-integration.md`
 - `references/patterns.md`
 - `references/troubleshooting.md`
 - `references/troubleshooting-build-runtime.md`

@@ -4,7 +4,7 @@ A standalone skills repository for IntelliJ Platform plugin development.
 
 This repository currently contains one focused skill:
 
-- `skills/intellij-platform-sdk` — a structured skill for working with the modern IntelliJ Platform v2 SDK / IntelliJ Platform Gradle Plugin 2.x.
+- `skills/intellij-platform-sdk` — a structured skill for working with the modern IntelliJ Platform v2 SDK / IntelliJ Platform Gradle Plugin 2.x, including newer protocol-style integrations such as LSP and MCP-related plugin surfaces.
 
 The skill is designed to help with:
 
@@ -49,6 +49,8 @@ intellij-platform-sdk-skills/
             ├── extension_points.md
             ├── code_samples.md
             ├── patterns.md
+            ├── lsp.md
+            ├── mcp-and-ai-integration.md
             ├── troubleshooting.md
             ├── troubleshooting-build-runtime.md
             └── troubleshooting-psi-ui-testing.md

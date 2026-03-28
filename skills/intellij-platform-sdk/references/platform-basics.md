@@ -304,7 +304,7 @@ ApplicationManager.getApplication().invokeLater(
 ```
 
 - `defaultModalityState()` is the usual default
-- `nonModal()` waits until modal dialogs close
+- `nonModal()` runs only when no modal dialog is showing
 - `current()` ties execution to the current dialog stack
 - `any()` ignores modal dialogs and is only safe for pure UI work — never for PSI/VFS/project-model changes
 

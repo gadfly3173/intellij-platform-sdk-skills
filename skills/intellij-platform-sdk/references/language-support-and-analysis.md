@@ -164,6 +164,8 @@ public @NotNull OptPane getOptionsPane() {
 
 Use `OptionController` for custom binding logic. Note: if a superclass defines `getOptionsPane()`, any `createOptionsPanel()` in subclasses is silently ignored.
 
+For more advanced cases, return a custom `OptionController` from `getOptionController()` so options can be backed by maps, nested configuration objects, or other non-trivial storage instead of simple fields.
+
 ## Parameter info
 
 Use `ParameterInfoHandler` (EP `com.intellij.codeInsight.parameterInfo`) when the user wants signature help while typing function or method arguments. This feature is distinct from completion: it explains the currently selected callable and highlights the active parameter.
@@ -176,9 +178,62 @@ Use `SpellcheckingStrategy` (EP `com.intellij.spellchecker.support`) when identi
 
 Rename support is only part of the refactoring story. If the language needs structural delete checks, also implement safe-delete support so the IDE can detect references before removing declarations.
 
+### Rename refactoring details
+
+For standard rename support, make sure the PSI and reference layers cooperate correctly:
+
+- `PsiNamedElement.setName()` updates the declaration element
+- `PsiReference.handleElementRename()` updates references
+- dummy-file or factory-based PSI reconstruction is often the safest way to build replacement nodes
+- if references extend `PsiReferenceBase`, `ElementManipulator.handleContentChange()` often becomes the rename path for reference text
+
+Use these extension/customization points when needed:
+
+- `com.intellij.lang.namesValidator` → `NamesValidator` for language-level identifier validation
+- `com.intellij.renameInputValidator` → `RenameInputValidator` / `RenameInputValidatorEx` for context-sensitive validation and custom error messages
+- `RenamePsiElementProcessor` for renaming alternate elements, linked elements, or customizing conflict/reference handling
+- `com.intellij.vetoRenameCondition` to block rename for specific PSI cases
+- `RenameHandler` only when you need to replace the standard rename UI/workflow entirely
+
 ## Symbols API
 
 For newer platform code, pay attention to the Symbols-based declarations/references model. This is especially relevant when the user asks about cross-language navigation, richer reference semantics, or modern documentation integration.
+
+## Poly Symbols and Web Types
+
+For web-framework and frontend-oriented plugins, also check whether the newer Poly Symbols ecosystem fits better than ad-hoc completion/reference code.
+
+### Poly Symbols
+
+Poly Symbols is the newer framework that supersedes the earlier Web Symbols naming in current SDK docs. It is especially relevant when the task is about HTML/CSS/JS framework metadata, symbol contribution, framework-aware completion, or documentation/navigation for web technologies.
+
+Use Poly Symbols when the plugin needs to:
+
+- contribute statically known framework symbols
+- integrate framework metadata with completion, navigation, or documentation
+- model web-oriented symbol scopes and contexts instead of hand-writing every contributor
+
+### Web Types
+
+Web Types is a JSON metadata format used to contribute statically defined Poly Symbols. It is a strong fit when the framework surface is mostly declarative.
+
+A plugin can ship Web Types JSON and register it through the `com.intellij.polySymbols.webTypes` extension point. The file can also be discovered from `package.json` in NPM packages or local JS projects.
+
+```xml
+<extensions defaultExtensionNs="com.intellij">
+    <polySymbols.webTypes
+        source="/web-types/my-framework.web-types.json"
+        enableByDefault="true"/>
+</extensions>
+```
+
+Use Web Types when:
+
+- the symbol model is mostly static metadata
+- the target domain is web-oriented and already described well by JSON schema
+- you want IDE support without building a full custom symbol framework in code
+
+Prefer handwritten Poly Symbols or other language APIs when symbol availability depends heavily on project-specific computation, dynamic resolve, or non-web language structure.
 
 ## Navigation bar integration
 

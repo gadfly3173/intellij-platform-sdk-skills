@@ -12,6 +12,7 @@ Use this reference when the user needs dialogs, tool windows, settings pages, no
 - notifications
 - popups (JBPopup, ListPopup)
 - project wizard and project-view integration
+- status bar widgets and editor notifications
 
 ## UI principles
 
@@ -169,9 +170,36 @@ Use `DialogWrapper` when the dialog has validation, multiple fields, custom butt
 ### Important notes
 
 - Tool windows are disabled during indexing unless `ToolWindowFactory` implements `DumbAware`
-- Use `ToolWindowFactory.isApplicableAsync(Project)` (since 2023.3) for conditional display evaluated during project load; it is not the right mechanism for arbitrary runtime show/hide decisions after the project is already open
+- Use suspending `ToolWindowFactory.isApplicableAsync(Project)` for conditional display evaluated during project load; it is not the right mechanism for arbitrary runtime show/hide decisions after the project is already open
 - For programmatic tool windows (shown after specific actions), use `ToolWindowManager.registerToolWindow()`
 - Use `ToolWindowManager.invokeLater()` instead of `Application.invokeLater()` for EDT tasks related to tool windows
+
+## New Project Wizard
+
+For new-project creation flows, prefer the modern New Project Wizard APIs rather than legacy module/project builder patterns when targeting current platform versions.
+
+Use this path when the plugin needs to:
+
+- add a new project generator or framework/module setup step
+- collect user input during project creation
+- generate starter files, SDK settings, or module structure from wizard data
+
+Key APIs and extension points:
+
+- `LanguageGeneratorNewProjectWizard` + `com.intellij.newProjectWizard.languageGenerator`
+- `GeneratorNewProjectWizard` + `com.intellij.newProjectWizard.generator`
+- `NewProjectWizardStep` for step implementations
+- `RootNewProjectWizardStep` for framework-style root setup
+- `NewProjectWizardChainStep` / `nextStep()` for multi-step flows shown on one screen
+
+Guidance:
+
+- use Kotlin UI DSL v2 in `setupUI()`
+- keep `setupProject()` focused on applying collected data
+- use language generators for general-purpose project types and framework generators for technology-specific flows
+- prefer the new wizard APIs over legacy `ModuleBuilder` flows unless compatibility requirements force the older path
+
+Keep wizard steps lightweight, validate inputs early, and separate UI collection from project-generation logic.
 
 ## Settings and persistent state
 
@@ -393,6 +421,7 @@ JBPopupFactory.getInstance().createListPopup(step).showInBestPositionFor(editor)
 If the user asks for project-level UX changes, consider these hooks:
 
 - project wizard/module wizard integration
+- for modern New Project Wizard work, prefer the newer wizard APIs over legacy module-type/module-wizard hooks
 - project view panes
 - tree structure providers
 - custom module types
