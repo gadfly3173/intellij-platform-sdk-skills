@@ -473,6 +473,83 @@ Register in `plugin.xml`:
 
 Start the IDE with VM parameter `-XX:+UnlockDiagnosticVMOptions`, enable internal mode, and set registry key `ide.plugins.snapshot.on.unload.fail` to `true`. On unload failure a `.hprof` heap snapshot is generated in the user home directory. Open it, find the `PluginClassLoader` referencing your plugin ID — every reference to it is a memory leak. Check logs under category `com.intellij.ide.plugins.DynamicPlugins`.
 
+## Remote Development and Split Mode
+
+Split mode (Remote Development) allows a plugin's frontend (IDE UI) and backend (project model, PSI, indexes) to run on separate machines. Enable split mode in the Gradle build:
+
+```kotlin
+intellijPlatform {
+    splitMode = true  // default: true
+    splitModeTarget = SplitModeTarget.BACKEND  // default
+}
+```
+
+### Modular plugins
+
+For split-mode compatibility, organize plugin parts so the frontend and backend can run independently:
+
+- **Frontend-only code** — UI, editors, actions that delegate to backend services
+- **Backend-only code** — PSI, indexes, project model, heavy computation
+- **Shared code** — data objects, serializable types used by both sides
+
+Mark backend-only dependencies with `SplitModeTarget.BACKEND` and frontend-only with `SplitModeTarget.FRONTEND`.
+
+### Remote procedure calls
+
+When frontend and backend are separated, use `RemoteService` and `RemoteServiceConnection` for cross-side communication instead of direct Java method calls that would fail across the split.
+
+### Key constraints
+
+- Do not access PSI, `Project`, `Module`, or VFS from frontend-only code when running in split mode
+- Persistent state must be explicitly synchronized between sides
+- Use `PasswordSafe.getAsync()` (since 2025.3) for credential reads sensitive to remote-dev split
+
+## Workspace Model
+
+The Workspace Model (`com.intellij.workspaceModel`) is a newer API for representing project structure. It replaces the older project model APIs in many areas.
+
+### When to use Workspace Model
+
+- Reading or modifying project structure (modules, libraries, facets, SDKs)
+- Reacting to project structure changes
+- Creating custom entity types for plugin-specific project data
+
+### Core concepts
+
+- `WorkspaceModel` — the project structure snapshot
+- `WorkspaceEntity` — a typed entity (module, library, facet, etc.)
+- `EntityStorage` — the persistent store for workspace entities
+- `WorkspaceModelChangeListener` — react to structure changes
+
+### Reading entities
+
+```java
+WorkspaceModel model = WorkspaceModel.getInstance(project);
+EntityStorage storage = model.getEntityStorage();
+
+// Query all module entities
+storage.getEntities(ModuleEntity.class).forEach(module -> {
+    System.out.println(module.getName());
+});
+```
+
+### Modifying entities
+
+```java
+WorkspaceModel model = WorkspaceModel.getInstance(project);
+model.update("Add library", builder -> {
+    builder.addEntity(LibraryEntity.create("my-lib", ...));
+});
+```
+
+### When not to use Workspace Model
+
+- For simple project-level settings — use `PersistentStateComponent`
+- For code-level operations (PSI, references, navigation) — use PSI APIs
+- For module-level operations where the older `Module` API is already sufficient and the code does not need to be migration-ready
+
+The Workspace Model is the strategic future direction for project structure, but many existing plugin APIs still expect the traditional `Module`, `Library`, and `Facet` types. Bridge between them with `WorkspaceModel.getInstance(project).findModuleEntity(module)` and similar methods.
+
 ## Architecture heuristics
 
 When helping the user implement a feature:
@@ -487,4 +564,5 @@ When helping the user implement a feature:
 
 - Read `psi-and-indexing.md` for PSI traversal, references, and custom indexes
 - Read `ui-settings-and-toolwindows.md` for dialogs, settings, and tool windows
+- Read `execution-and-run-configs.md` for run configurations and execution model
 - Read `troubleshooting.md` if actions are invisible, services fail, or threading assertions appear

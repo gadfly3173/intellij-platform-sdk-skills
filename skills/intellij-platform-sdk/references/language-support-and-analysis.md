@@ -342,6 +342,112 @@ If the user asks for any of these, you likely need the matching extension point(
 
 Some extension points can be `DumbAware`, but only do this if they avoid index-backed work or are documented safe in dumb mode.
 
+## Element Patterns
+
+Element patterns (`PlatformPatterns`, `StandardPatterns`) provide a declarative way to match PSI structure. They are essential in two contexts:
+
+1. **Completion contributors** — `CompletionContributor.extend()` uses patterns to decide where completions apply
+2. **Reference contributors** — `PsiReferenceContributor` uses patterns to identify elements that produce references
+
+### Key pattern classes
+
+| Class | Purpose |
+|---|---|
+| `PlatformPatterns` | Factory for PSI, IElement, and VirtualFile patterns |
+| `StandardPatterns` | Factory for string/char patterns; logical ops (and/or/not) |
+| `PsiElementPattern` | Patterns for PSI elements (children, parents, neighbors) |
+
+### Critical rule: patterns match LEAF PSI
+
+`PlatformPatterns.psiElement()` patterns match against **leaf PSI elements**, not composite nodes. Use `withParent()` or `withSuperParent()` to match enclosing composite elements.
+
+```java
+// WRONG — matches a leaf token, never a method call
+extend(CompletionType.BASIC,
+    PlatformPatterns.psiElement(PsiMethodCallExpression.class),
+    provider
+);
+
+// CORRECT — match leaf, check parent is method call
+extend(CompletionType.BASIC,
+    PlatformPatterns.psiElement()
+        .withSuperParent(2, PsiMethodCallExpression.class),
+    provider
+);
+```
+
+### Common pattern examples
+
+```java
+// Match PSI element after specific leaf tokens
+psiElement()
+    .afterLeaf("[", ",")
+    .withSuperParent(2, JsonArray.class)
+
+// Match in specific file type
+psiElement()
+    .inVirtualFile(virtualFile().withExtension("fxml"))
+
+// Combine with logical NOT
+psiElement()
+    .withParent(JsonStringLiteral.class)
+    .andNot(psiElement().withText("\"\""))
+```
+
+### Debugging patterns
+
+Use the **PSI Viewer** (Internal Actions > Tools > PSI Viewer) to inspect the actual PSI tree. Patterns that look right often fail because the actual PSI nesting is different from what the source code suggests. Set conditional breakpoints on pattern matchers when patterns don't trigger as expected.
+
+## Color Scheme Management
+
+For language plugins, proper color scheme management ensures syntax highlighting works correctly across all IDE themes (light, dark, custom).
+
+### Text attribute key dependency
+
+The recommended approach is to chain your text attribute keys to standard keys from `DefaultLanguageHighlighterColors`:
+
+```java
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors;
+import com.intellij.openapi.editor.colors.TextAttributesKey;
+
+// Chain to a standard key — the scheme manager falls back through the chain
+static final TextAttributesKey MY_KEYWORD =
+    TextAttributesKey.createTextAttributesKey(
+        "MY_KEYWORD",
+        DefaultLanguageHighlighterColors.KEYWORD
+    );
+
+// Further chaining
+static final TextAttributesKey MY_BUILTIN =
+    TextAttributesKey.createTextAttributesKey(
+        "MY_BUILTIN",
+        MY_KEYWORD
+    );
+```
+
+### Rules
+
+- **Never use fixed default colors** — this forces scheme designers to explicitly define colors for your keys, or they may visually clash
+- Chain to the most generic standard key (e.g., `DefaultLanguageHighlighterColors.IDENTIFIER`) if unsure
+- The color scheme manager searches for your key first, then falls back through the chain, then to the default scheme
+
+### Providing defaults for bundled schemes
+
+A language plugin can ship default text attributes for "Default" and "Darcula" schemes:
+
+```xml
+<extensions defaultExtensionNs="com.intellij">
+    <additionalTextAttributes
+        scheme="Default"
+        file="colorSchemes/MyLangDefault.xml"/>
+    <additionalTextAttributes
+        scheme="Darcula"
+        file="colorSchemes/MyLangDarcula.xml"/>
+</extensions>
+```
+
+The `.xml` file contains `TextAttributes` definitions keyed by your `TextAttributesKey` names. These defaults let existing schemes work without manual setup, while still allowing scheme designers to override.
+
 ## When to also read other references
 
 - Read `extension_points.md` for exact registration syntax

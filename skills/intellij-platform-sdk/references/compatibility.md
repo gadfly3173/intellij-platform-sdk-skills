@@ -8,6 +8,7 @@ IntelliJ Platform uses the following versioning scheme:
 
 | Version | Build Number | Format |
 |---------|--------------|--------|
+| 2026.2 | 262.xxxx.xx | BRANCH.BUILD |
 | 2026.1 | 261.xxxx.xx | BRANCH.BUILD |
 | 2025.3 | 253.xxxx.xx | BRANCH.BUILD |
 | 2025.2 | 252.xxxx.xx | BRANCH.BUILD |
@@ -26,6 +27,7 @@ Build number format: `YYR` where:
 | IntelliJ Platform Gradle Plugin | Minimum Gradle | Minimum Platform | Notes |
 |--------------------------------|----------------|------------------|-------|
 | 2.x (example current line: 2.13.1) | 8.13 | 2022.3 | Use 2.x for new projects; verify the exact plugin version in the official docs before pinning |
+| 2.3.0+ | 8.13 | 2022.3 | Android Studio targets require 2.3.0+ |
 | 1.x (legacy) | 7.3 | — | Legacy only |
 
 ## SDK Migration (1.x to 2.x)
@@ -125,6 +127,7 @@ Use actual build numbers only. Do not invent branch or patch numbers. Multipart 
 
 | Version | Build | Since |
 |---------|-------|-------|
+| 2026.2 | 262.xxx | 262 |
 | 2026.1 | 261.xxx | 261 |
 | 2025.3 | 253.xxx | 253 |
 | 2025.2 | 252.xxx | 252 |
@@ -142,6 +145,19 @@ Use the labels below literally:
 - **Breaking API** — code/config changes are required for affected plugins
 - **Notable change** — behavior or capabilities changed, but not always as a hard break
 - **Migration note** — recommended transition guidance or tooling support
+
+#### 2026.1
+- Notable change: Range formatting, code lens, and organize imports LSP features
+- Notable change: Terminal API extension points for custom terminal behavior
+- Notable change: LSP `pullDiagnostics` enabled by default
+- Breaking API: `@Obsolete`-annotated APIs from earlier releases may be removed
+
+#### 2025.3
+- Breaking API: `IntellijIdeaCommunity` (`IC`) and `PyCharmCommunity` (`PC`) types deprecated as IDE dependency targets; use unified product helpers `intellijIdea()` / `pycharm()` instead
+- Notable change: `strict-until-build` introduced as alternative to blanket `until-build` for targeted upper-bound version pinning
+- Notable change: LSP server-initiated progress, highlight usages, go to symbol, file structure, breadcrumbs, sticky lines, parameter info
+- Notable change: `PasswordSafe.getAsync()` available for coroutine-based credential access (Remote Development-friendly)
+- Notable change: Modules `com.intellij.modules.ultimate` deprecated for LSP plugins — use `com.intellij.modules.lsp`
 
 #### 2025.2
 - Notable change: `LspCustomization` API becomes the customization path for newly introduced LSP features in 2025.2+
@@ -192,6 +208,7 @@ Use the labels below literally:
 
 | IntelliJ Platform | Java | Bundled Kotlin stdlib |
 |-------------------|------|-----------------------|
+| 2026.2 | 21 | 2.3.x |
 | 2026.1 | 21 | 2.3.20 |
 | 2025.3 | 21 | 2.2.20 |
 | 2025.2 | 21 | 2.1.20 |

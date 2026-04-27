@@ -35,3 +35,7 @@ Use this file as a routing guide instead of loading every troubleshooting note a
 - `plugin.xml` wiring, class loading, action registration, or service initialization fails → `troubleshooting-build-runtime.md`
 - `IndexNotReadyException`, PSI invalidation, write-action errors, or EDT assertions → `troubleshooting-psi-ui-testing.md`
 - editor/document state looks wrong, UI does not refresh, or tests/debugging in sandbox IDE are failing → `troubleshooting-psi-ui-testing.md`
+- run configuration not appearing or execution fails → `execution-and-run-configs.md`, then fall back to `troubleshooting-build-runtime.md`
+- live template not expanding or postfix completion not appearing → `templates.md`, then check `extension_points.md`
+- theme not applying or color issues → `themes.md`, then check `extension_points.md`
+- icon not loading, wrong variant, or New UI icon issues → `icons.md`, then check `extension_points.md` for `iconMapper`

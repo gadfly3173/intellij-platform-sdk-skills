@@ -203,6 +203,182 @@ public static void replaceRange(@NotNull Editor editor,
 }
 ```
 
+## Editor Coordinates Patterns
+
+### Caret position and offset
+
+```java
+Editor editor = e.getData(CommonDataKeys.EDITOR);
+if (editor == null) return;
+
+CaretModel caretModel = editor.getCaretModel();
+Caret primaryCaret = caretModel.getPrimaryCaret();
+
+// Zero-based offset from start of document
+int offset = primaryCaret.getOffset();
+
+// Logical position (zero-based line, column)
+LogicalPosition logicalPos = primaryCaret.getLogicalPosition();
+int line = logicalPos.line;    // 0-based
+int column = logicalPos.column; // 0-based
+
+// Visual position (accounts for folding, soft wraps)
+VisualPosition visualPos = primaryCaret.getVisualPosition();
+```
+
+### Offset ↔ LogicalPosition conversion
+
+```java
+Document document = editor.getDocument();
+
+// Offset to logical position
+int lineNumber = document.getLineNumber(offset);
+int lineStart = document.getLineStartOffset(lineNumber);
+int column = offset - lineStart;
+LogicalPosition pos = new LogicalPosition(lineNumber, column);
+
+// Logical position to offset
+int lineStartOffset = document.getLineStartOffset(pos.line);
+int targetOffset = lineStartOffset + pos.column;
+```
+
+### Multiple carets
+
+```java
+CaretModel caretModel = editor.getCaretModel();
+List<Caret> allCarets = caretModel.getAllCarets();
+
+// Iterate all carets
+for (Caret caret : allCarets) {
+    int caretOffset = caret.getOffset();
+    // work with each caret position
+}
+
+// Add a caret
+caretModel.addCaret(visualPosition);
+
+// Remove a caret
+caretModel.removeCaret(caret);
+```
+
+### Selection handling
+
+```java
+SelectionModel selection = editor.getSelectionModel();
+
+if (selection.hasSelection()) {
+    int start = selection.getSelectionStart();
+    int end = selection.getSelectionEnd();
+    String selectedText = selection.getSelectedText();
+}
+
+// Programmatically select
+selection.setSelection(startOffset, endOffset);
+```
+
+### Editor scrolling
+
+```java
+// Scroll to make offset visible
+editor.getScrollingModel().scrollToCaret(ScrollType.CENTER);
+
+// Scroll to logical position
+editor.getScrollingModel().scrollTo(
+    editor.offsetToLogicalPosition(targetOffset),
+    ScrollType.CENTER
+);
+```
+
+## Editor FAQ Patterns
+
+### Get the active editor
+
+```java
+// From an action
+Editor editor = e.getData(CommonDataKeys.EDITOR);
+
+// From a PSI element
+Editor editor = PsiEditorUtil.findEditor(psiElement);
+
+// Get the file editor manager
+FileEditorManager fem = FileEditorManager.getInstance(project);
+VirtualFile[] openFiles = fem.getOpenFiles();
+FileEditor[] selectedEditors = fem.getSelectedEditors();
+```
+
+### Listen for editor events
+
+```java
+// Register editor lifecycle listener
+project.getMessageBus().connect(disposable).subscribe(
+    FileEditorManagerListener.FILE_EDITOR_MANAGER,
+    new FileEditorManagerListener() {
+        @Override
+        public void fileOpened(@NotNull FileEditorManager source,
+                               @NotNull VirtualFile file) {
+            // file was opened
+        }
+
+        @Override
+        public void fileClosed(@NotNull FileEditorManager source,
+                               @NotNull VirtualFile file) {
+            // file was closed
+        }
+
+        @Override
+        public void selectionChanged(@NotNull FileEditorManagerEvent event) {
+            // active editor or selection changed
+        }
+    }
+);
+```
+
+### Custom editor tab title
+
+```java
+class MyEditorTabTitleProvider implements EditorTabTitleProvider {
+    @Override
+    public @Nullable String getEditorTabTitle(
+            @NotNull Project project,
+            @NotNull VirtualFile file,
+            @Nullable Editor editor) {
+        if (file.getExtension().equals("myext")) {
+            return "My: " + file.getNameWithoutExtension();
+        }
+        return null; // fall back to default title
+    }
+}
+```
+
+Register: `com.intellij.editorTabTitleProvider` EP.
+
+### Custom editor tab color
+
+```java
+class MyEditorTabColorProvider implements EditorTabColorProvider {
+    @Override
+    public @Nullable Color getEditorTabColor(
+            @NotNull Project project,
+            @NotNull VirtualFile file) {
+        // Return a color or null for default
+        return file.isModified() ? JBColor.YELLOW : null;
+    }
+}
+```
+
+Register: `com.intellij.editorTabColorProvider` EP.
+
+### Open a "fake" (in-memory) file in editor
+
+```java
+LightVirtualFile lightFile = new LightVirtualFile(
+    "preview.myext",
+    MyLanguageFileType.INSTANCE,
+    previewContent
+);
+FileEditorManager.getInstance(project).openFile(lightFile, true);
+```
+
 ## Virtual File Patterns
 
 ### Find File
@@ -306,6 +482,44 @@ ProgressManager.getInstance().run(new Task.Modal(
     }
 });
 ```
+
+## Text Selection Patterns
+
+### Extend/Shrink selection for custom language
+
+```java
+import com.intellij.codeInsight.editorActions.ExtendWordSelectionHandler;
+import com.intellij.openapi.util.TextRange;
+
+class MyExtendWordSelectionHandler implements ExtendWordSelectionHandler {
+    @Override
+    public boolean canSelect(@NotNull PsiElement e) {
+        // Return true for PSI elements that should offer extra selection ranges
+        return e instanceof MyCallExpression;
+    }
+
+    @Override
+    public List<TextRange> select(
+            @NotNull PsiElement e,
+            @NotNull CharSequence editorText,
+            int cursorOffset,
+            @NotNull Editor editor) {
+
+        List<TextRange> ranges = new ArrayList<>();
+        // Add parent range as final (largest) selection
+        ranges.add(e.getTextRange());
+        // Add intermediate ranges before the parent
+        MyCallExpression call = (MyCallExpression) e;
+        PsiElement argList = call.getArgumentList();
+        if (argList != null) {
+            ranges.add(0, argList.getTextRange()); // inserted before parent range
+        }
+        return ranges;
+    }
+}
+```
+
+Register: `com.intellij.extendWordSelectionHandler` EP.
 
 ## Dialog Patterns
 
@@ -569,6 +783,60 @@ public class MyCompletionContributor extends CompletionContributor {
                 }
             }
         );
+    }
+}
+```
+
+## Icon Patterns
+
+### Loading an icon
+
+```java
+// From platform icons
+Icon icon = AllIcons.Actions.Refresh;
+
+// From custom icon file (path starts with /)
+Icon icon = IconLoader.getIcon("/icons/myAction.svg", MyClass.class);
+```
+
+### Setting an icon on a component
+
+```java
+JButton button = new JButton(AllIcons.Actions.Refresh);
+JLabel label = new JLabel("Status", AllIcons.General.Information, SwingConstants.LEFT);
+```
+
+### Animated icon
+
+```java
+AnimatedIcon spinner = new AnimatedIcon(
+    500,
+    AllIcons.Process.Step_1,
+    AllIcons.Process.Step_2
+);
+JLabel spinnerLabel = new JLabel(spinner);
+```
+
+### Icon in a tree cell renderer
+
+```java
+class MyTreeCellRenderer extends ColoredTreeCellRenderer {
+    @Override
+    public void customizeCellRenderer(
+            @NotNull JTree tree,
+            Object value,
+            boolean selected,
+            boolean expanded,
+            boolean leaf,
+            int row,
+            boolean hasFocus) {
+
+        if (value instanceof MyNode node) {
+            setIcon(node.isActive()
+                ? AllIcons.Actions.Execute
+                : AllIcons.Nodes.EmptyNode);
+            append(node.getName());
+        }
     }
 }
 ```

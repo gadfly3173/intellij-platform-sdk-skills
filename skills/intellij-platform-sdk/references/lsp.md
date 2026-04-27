@@ -16,10 +16,12 @@ Use this reference when the user wants to integrate a Language Server into an In
 
 LSP support in the IntelliJ Platform requires targeting platform version `2023.2` or later. It is not available in:
 
-- IntelliJ IDEA Community Edition
+- IntelliJ IDEA Community Edition (open-source builds)
 - Android Studio
 
-For other JetBrains IDE products, availability depends on the target IDE product and platform version documented for the IntelliJ Platform LSP API. Use the official LSP documentation for the exact IDE/version combination you are targeting rather than assuming a generic "commercial IDE only" rule.
+It is available in: IntelliJ IDEA Ultimate, WebStorm, PhpStorm, PyCharm, DataSpell, RubyMine, CLion, DataGrip, GoLand, Rider, and RustRover.
+
+Since 2025.1, it is also supported in unified PyCharm without Pro subscription.
 
 ## When to use LSP vs. native language support
 
@@ -66,6 +68,8 @@ The required module dependency changed in 2025.2.1:
 <!-- Before 2025.2.1 -->
 <depends>com.intellij.modules.ultimate</depends>
 ```
+
+Since 2025.3, `com.intellij.modules.ultimate` is deprecated for LSP plugins. Use `com.intellij.modules.lsp` for 2025.2.1+ targets.
 
 ### IDE sources setup
 
@@ -186,7 +190,7 @@ Before recommending LSP, check these tradeoffs:
 | 2024.3.1 | didSave notification, go to type declaration |
 | 2025.1 | Document link |
 | 2025.1.2 | Pull diagnostics (enabled by default in 2025.2) |
-| 2025.2 | LSP customization API |
+| 2025.2 | LSP customization API (`LspCustomization`), module dependency `com.intellij.modules.lsp` |
 | 2025.2.2 | Inlay hints, folding range |
 | 2025.3 | Server-initiated progress, highlight usages, go to symbol, file structure, breadcrumbs, sticky lines, parameter info |
 | 2025.3.1 | Selection range, call hierarchy, type hierarchy |

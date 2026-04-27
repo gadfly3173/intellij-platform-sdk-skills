@@ -8,7 +8,9 @@ description: >
   plugin context and mentions plugin.xml, org.jetbrains.intellij.platform, AnAction, PSI,
   LocalInspectionTool, CompletionContributor, ParserDefinition, ToolWindowFactory,
   PersistentStateComponent, extension points, plugin verifier, Marketplace publishing,
-  custom language support, or IntelliJ Platform Gradle Plugin 2.x setup/migration.
+  custom language support, IntelliJ Platform Gradle Plugin 2.x setup/migration,
+  run configuration/ConfigurationType, live templates/postfix completion, IDE theme/color scheme,
+  plugin icons/IconLoader/AllIcons, or LSP/MCP integration in plugin-development context.
   Do not trigger for general JetBrains IDE usage, ordinary run configurations, generic logging,
   generic Gradle questions, or language-server discussions outside IntelliJ plugin development.
 ---
@@ -27,6 +29,11 @@ This skill is intentionally split into focused references so the main file stays
 - working with PSI, references, indexing, VFS, and dumb mode
 - building custom language support
 - implementing inspections, intentions, quick fixes, completion, formatting, and documentation
+- implementing run configurations, program runners, and execution consoles
+- providing live templates, file templates, and postfix completion
+- creating or extending IDE themes and color schemes
+- integrating Language Servers (LSP) in plugin-development context
+- contributing MCP tools and toolsets
 - testing plugins and preparing Marketplace publication
 - handling version compatibility and Gradle plugin migration
 
@@ -61,7 +68,8 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - PSI traversal or modification
 - references, resolve, rename, find usages, safe delete
 - code generation using PSI factories
-- file-based indexes, stub indexes, gists, file view providers
+- file-based indexes, stub indexes, gists
+- file view providers (multi-language PSI trees in a single file)
 - `IndexNotReadyException`, dumb mode, PSI performance
 - PSI cookbook (Java-specific common operations)
 - caching with `CachedValuesManager`
@@ -81,13 +89,15 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - Poly Symbols and Web Types for web-framework metadata
 - DocumentationTarget API
 - `OptPane`, declarative inspection options, `OptionController`
+- element patterns (`PlatformPatterns`, `PsiElementPattern`) for completion/reference contributors
+- color scheme management, `TextAttributesKey` dependency chaining
 
 ### Read `references/ui-settings-and-toolwindows.md` when the task is about
 
 - Kotlin UI DSL v2 (`panel { row { } }`, `BoundConfigurable`)
 - dialogs and IntelliJ UI components
 - tool windows
-- settings/configurables
+- settings/configurables (including parentId/settings groups hierarchy)
 - persistent state
 - notifications
 - popups (`JBPopup`, `ListPopup`, chooser popups)
@@ -96,6 +106,9 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - editor notification banners
 - persisting sensitive data (`PasswordSafe`)
 - embedded editor components (`EditorTextField`)
+- internationalization (i18n) and localization
+- accessibility (keyboard navigation, screen readers)
+- plugin UX principles
 
 ### Read `references/testing-and-publishing.md` when the task is about
 
@@ -144,13 +157,51 @@ First, identify the user’s real task. Then read only the relevant reference fi
 - understanding MCP-related extension points such as `com.intellij.mcpServer.*`
 - MCP guidance in areas where the official SDK docs are still sparse
 
+### Read `references/execution-and-run-configs.md` when the task is about
+
+- implementing custom run configurations (`ConfigurationType`, `RunConfigurationBase`)
+- run configuration producers (auto-detecting configurations from context)
+- program runners and execution environments
+- execution consoles and console filters
+- run configuration macros
+- before/after launch tasks
+
+### Read `references/templates.md` when the task is about
+
+- providing live templates bundled in a plugin
+- custom live template macros/functions
+- file and code templates (Velocity-based)
+- postfix completion templates
+- surround-with descriptors
+
+### Read `references/themes.md` when the task is about
+
+- creating or extending IDE UI themes
+- theme JSON descriptor format
+- editor color scheme integration
+- icon customization in themes
+- Islands theme compatibility
+- deploying and publishing theme plugins
+
+### Read `references/icons.md` when the task is about
+
+- adding or organizing icons in a plugin
+- icon file naming conventions (dark variants, HiDPI)
+- icon holder classes (by-path vs by-class referencing)
+- New UI (expui) icon requirements and icon mappings
+- animated icons (`AnimatedIcon`, `AsyncProcessIcon`)
+- icon tooltips via resource bundles
+
 ### Read `references/patterns.md` when the task is about
 
 - reusable implementation patterns
-- editor/document helpers
+- editor/document helpers (caret position, selection, scrolling)
+- editor coordinate system (offsets, logical/visual positions)
+- editor FAQ (get active editor, listen for events, custom tab title/color)
 - progress handling
 - dialog/tool-window patterns
 - PSI/editor/VFS utilities
+- icon loading and rendering patterns
 
 ### Read `references/troubleshooting.md` when the task is about
 
@@ -222,6 +273,10 @@ When a user asks for implementation help:
 - `references/code_samples.md`
 - `references/lsp.md`
 - `references/mcp-and-ai-integration.md`
+- `references/execution-and-run-configs.md`
+- `references/templates.md`
+- `references/themes.md`
+- `references/icons.md`
 - `references/patterns.md`
 - `references/troubleshooting.md`
 - `references/troubleshooting-build-runtime.md`

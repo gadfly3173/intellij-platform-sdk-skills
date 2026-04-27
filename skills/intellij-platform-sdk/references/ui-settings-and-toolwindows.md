@@ -223,6 +223,43 @@ Register settings pages using the appropriate extension point:
 
 Both require `id`, `displayName` (or `key`+`bundle`), and `parentId` attributes. Common `parentId` values: `tools`, `editor`, `appearance`, `build`, `language`.
 
+### Common settings parentId values
+
+When registering settings pages, use these common `parentId` values to position your page in the IDE Settings dialog:
+
+| parentId | Settings category |
+|---|---|
+| `tools` | Tools |
+| `editor` | Editor |
+| `appearance` | Appearance & Behavior > Appearance |
+| `build` | Build, Execution, Deployment |
+| `language` | Languages & Frameworks |
+| `plugins` | Plugins |
+| `application` | Root of Application settings (less common) |
+| `project` | Root of Project settings (less common) |
+
+### Parent-child settings hierarchy
+
+For multi-level settings, use the parent configurable's `id` as the child's `parentId`:
+
+```xml
+<!-- Parent -->
+<projectConfigurable
+    parentId="tools"
+    id="com.example.parent"
+    displayName="My Plugin"
+    instance="com.example.ParentConfigurable"/>
+
+<!-- Child — parentId points to the parent's id -->
+<projectConfigurable
+    parentId="com.example.parent"
+    id="com.example.parent.child"
+    displayName="Sub Settings"
+    instance="com.example.ChildConfigurable"/>
+```
+
+Nested declarations are also supported (wrap child configurable elements inside the parent).
+
 ### Configurable thread safety
 
 IntelliJ may instantiate `Configurable` on a background thread. Do not create Swing components in the constructor — defer UI creation to `createComponent()`. Constructor rules:
@@ -445,8 +482,108 @@ If the user asks for project-level UX changes, consider these hooks:
 - reflect platform terminology and menu placement
 - avoid surprising behavior in core IDE surfaces
 
+## Internationalization (i18n)
+
+Plugins targeting 2024.1+ can provide localized messages for multiple languages. The IntelliJ Platform supports localization at both the IDE level and the plugin level.
+
+### Setup
+
+1. Create `messages/` directory under `src/main/resources/`
+2. Add `*Bundle.properties` files for each locale:
+
+```
+src/main/resources/messages/
+├── MyPluginBundle.properties           # default (English)
+├── MyPluginBundle_zh_CN.properties     # Simplified Chinese
+├── MyPluginBundle_ja.properties        # Japanese
+└── MyPluginBundle_de.properties        # German
+```
+
+3. Reference messages in code using the bundle:
+
+```java
+// Using resource bundle
+String message = MyPluginBundle.message("my.key");
+
+// In plugin.xml attributes, use bundle key references:
+// displayName="#my.settings.display.name"
+```
+
+### DynamicBundle pattern
+
+Since 2024.1, use `DynamicBundle` for message loading:
+
+```java
+public class MyPluginBundle extends DynamicBundle {
+    private static final MyPluginBundle INSTANCE = new MyPluginBundle();
+
+    public MyPluginBundle() {
+        super("messages.MyPluginBundle");
+    }
+
+    public static String message(@NotNull String key, Object @NotNull ... params) {
+        return INSTANCE.getMessage(key, params);
+    }
+}
+```
+
+### Plugin descriptor localization
+
+Plugin name, description, and other metadata can also be localized via `<resource-bundle>` in `plugin.xml`:
+
+```xml
+<resource-bundle>messages.MyPluginBundle</resource-bundle>
+
+<name>#plugin.name</name>
+<description>#plugin.description</description>
+```
+
+### Guidance
+
+- Provide English defaults in the base bundle
+- Use message format for dynamic values: `{0}` placeholders
+- Bundle keys should be descriptive: `settings.api.key.label`, not `key1`
+- Load the bundle lazily — don't eagerly initialize on class load
+- For settings/configurable UIs, use property key references
+
+## Accessibility
+
+Plugins should be accessible to users with disabilities. Key areas:
+
+- Provide meaningful accessible names for UI components via `.accessibleName()`
+- Ensure sufficient color contrast ratio (4.5:1 for normal text, 3:1 for large text)
+- Support keyboard-only navigation through all plugin UI
+- Use system font sizes — don't hardcode small fonts
+- Provide descriptive tooltips and contextual help
+- Test with screen readers (NVDA on Windows, VoiceOver on macOS)
+
+### Setting accessible names in Kotlin UI DSL v2
+
+```kotlin
+row("API Key:") {
+    textField()
+        .accessibleName("API Key input")
+        .bindText(settings::apiKey)
+}
+```
+
+## Plugin user experience principles
+
+When designing plugin UI and behavior:
+
+- **Discoverability** — place actions in expected menus; use descriptive action names
+- **Consistency** — use platform patterns (notifications, tool windows, settings) over custom solutions
+- **Performance** — defer heavy work; make `update()` fast; show progress for slow operations
+- **Non-intrusiveness** — don't add menu items to root menus unless essential; don't auto-show tool windows
+- **Clear feedback** — notify users when operations complete, especially background work
+- **Respect user intent** — don't override IDE defaults unexpectedly; make new features opt-in where feasible
+- **Graceful degradation** — handle missing dependencies cleanly; provide meaningful error messages
+
 ## When to also read other references
 
 - Read `platform-basics.md` for actions and threading around UI-triggered work
 - Read `extension_points.md` for exact XML declarations
+- Read `icons.md` for icon organization, loading, and New UI icon variants
+- Read `themes.md` for theme and color scheme guidance
+- Read `templates.md` for file templates and live templates
 - Read `code_samples.md` for `tool_window`, `settings`, `project_wizard`, and `project_view_pane`

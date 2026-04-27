@@ -159,6 +159,56 @@ Use file gists (`VirtualFileGist` or `PsiFileGist`) for lazily computed, cached 
 - Keep indexed payloads compact
 - Never assume index access works during dumb mode
 
+## File view providers
+
+`FileViewProvider` manages multiple PSI trees within a single physical file. This is essential for template files (JSP, JSX, Vue) or any file containing multiple languages.
+
+### Core concepts
+
+- One `FileViewProvider` per `VirtualFile`/`Document`
+- Can retrieve multiple `PsiFile` instances — one per language
+- Each PSI tree covers the entire file; non-matching regions use "outer language elements"
+
+### Accessing
+
+```java
+// From a PsiFile
+FileViewProvider provider = psiFile.getViewProvider();
+
+// From a VirtualFile
+FileViewProvider provider = PsiManager.getInstance(project)
+    .findViewProvider(virtualFile);
+
+// Get PSI for a specific language
+PsiFile xmlPsi = provider.getPsi(XMLLanguage.INSTANCE);
+
+// Get all languages in the file
+Set<Language> languages = provider.getLanguages();
+
+// Find element at offset in a specific language
+PsiElement element = provider.findElementAt(offset, language);
+```
+
+### Creating a multi-language file type
+
+Implement `FileViewProviderFactory` and register:
+
+```xml
+<extensions defaultExtensionNs="com.intellij">
+    <fileType.fileViewProviderFactory
+        filetype="MyFileType"
+        implementationClass="com.example.MyFileViewProviderFactory"/>
+</extensions>
+```
+
+### When to use
+
+- Files that embed multiple languages (templates, DSLs with embedded code)
+- Files where different parts should be analyzed by different language PSI trees
+- Any file type where a single PSI tree does not accurately represent the content
+
+Do not use `FileViewProvider` just to get a PSI file — `PsiManager.findFile()` is simpler and sufficient for single-language files.
+
 ## PSI performance
 
 ### Avoid repeated method calls

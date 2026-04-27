@@ -325,3 +325,17 @@ The first Marketplace upload must always be manual. After the plugin has been pu
 - Read `compatibility.md` for version migration or build-range questions
 - Read `extension_points.md` for exact XML registration syntax
 - Read `testing-and-publishing.md` for verifier, signing, and Marketplace release
+- Read `platform-basics.md` for Remote Development / split mode details
+- Read `icons.md` for icon organization, loading, and New UI variants
+
+## Plugin alternatives
+
+Before committing to a full plugin, consider whether a lighter alternative meets the need:
+
+- **Kotlin Notebook** (2025.2+): Use `%use intellij-platform` in a notebook cell to prototype IDE APIs interactively in the running IDE process — no plugin project needed
+- **Structural Search and Replace (SSR)**: Create custom inspections from search/replacement templates for pattern-based code checks, sharable via inspection profiles
+- **IDE Scripting Console**: Automate IDE tasks or extract project info via Kotlin/JavaScript/Groovy scripts
+- **Flora** (experimental): Write project-specific extensions as `.kts` or `.js` files stored in the project's `.plugins` directory
+- **LivePlugin**: Extend IDE functionality at runtime without restarts, using Kotlin/Groovy
+
+If the need is genuinely broad (many developers, complex integration, Marketplace distribution), proceed with a full plugin. Otherwise, a lighter alternative may be faster and easier to maintain.
