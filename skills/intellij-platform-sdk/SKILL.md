@@ -2,17 +2,16 @@
 name: intellij-platform-sdk
 description: >
   IntelliJ Platform plugin development with the v2 SDK / IntelliJ Platform Gradle Plugin 2.x.
-  Use this skill when the task is clearly about building, configuring, debugging, testing, or publishing
-  a plugin for JetBrains IDEs such as IntelliJ IDEA, WebStorm, PyCharm, GoLand, Rider, CLion,
-  PhpStorm, DataGrip, or Android Studio. Trigger when the user is working in an IntelliJ Platform
-  plugin context and mentions plugin.xml, org.jetbrains.intellij.platform, AnAction, PSI,
-  LocalInspectionTool, CompletionContributor, ParserDefinition, ToolWindowFactory,
-  PersistentStateComponent, extension points, plugin verifier, Marketplace publishing,
-  custom language support, IntelliJ Platform Gradle Plugin 2.x setup/migration,
-  run configuration/ConfigurationType, live templates/postfix completion, IDE theme/color scheme,
-  plugin icons/IconLoader/AllIcons, or LSP/MCP integration in plugin-development context.
-  Do not trigger for general JetBrains IDE usage, ordinary run configurations, generic logging,
-  generic Gradle questions, or language-server discussions outside IntelliJ plugin development.
+  Use this skill whenever the task is about building, configuring, debugging, testing, or publishing
+  a plugin for JetBrains IDEs (IntelliJ IDEA, WebStorm, PyCharm, GoLand, Rider, CLion, PhpStorm,
+  DataGrip, Android Studio). Trigger when the user is in a plugin context and mentions plugin.xml,
+  org.jetbrains.intellij.platform, AnAction, PSI, extension points, LocalInspectionTool,
+  CompletionContributor, ParserDefinition, ToolWindowFactory, PersistentStateComponent,
+  plugin verifier, Marketplace publishing, custom language support, Gradle plugin 2.x
+  setup/migration, ConfigurationType/run configurations, live templates/postfix completion,
+  IconLoader/AllIcons, IDE theme/color scheme, or LSP/MCP integration. Do not trigger for general
+  JetBrains IDE usage, ordinary run configurations, generic Gradle or logging questions, or
+  language-server discussions outside IntelliJ plugin development.
 ---
 
 # IntelliJ Platform SDK Skill
